@@ -1014,13 +1014,13 @@ static class GraphLayoutBuilder
             Attr =
             {
                 LayerDirection = LayerDirection.TB,
-                NodeSeparation = 36,
-                LayerSeparation = 72,
+                NodeSeparation = partition.Family == GraphFamily.ControlFlow ? 56 : 42,
+                LayerSeparation = partition.Family == GraphFamily.ControlFlow ? 104 : 86,
                 BackgroundColor = Color.White,
             },
         };
 
-        graph.LayoutAlgorithmSettings = CreateLayoutSettings(request.LayoutMode);
+        graph.LayoutAlgorithmSettings = CreateLayoutSettings(request.LayoutMode, partition);
         var metricsByNodeId = new Dictionary<string, LabelMetrics>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var noteId in partition.IncludedNoteIds.OrderBy(id => model.DepthById.GetValueOrDefault(id)).ThenBy(id => id, StringComparer.OrdinalIgnoreCase))
@@ -1132,16 +1132,18 @@ static class GraphLayoutBuilder
         node.Attr.LineWidth = 1.2;
     }
 
-    private static Microsoft.Msagl.Core.Layout.LayoutAlgorithmSettings CreateLayoutSettings(LayoutMode layoutMode)
+    private static Microsoft.Msagl.Core.Layout.LayoutAlgorithmSettings CreateLayoutSettings(
+        LayoutMode layoutMode,
+        GraphPartitionModel partition)
     {
         return layoutMode switch
         {
             LayoutMode.Mds => new MdsLayoutSettings
             {
-                NodeSeparation = 48,
-                ScaleX = 1.2,
-                ScaleY = 1.2,
-                IterationsWithMajorization = 40,
+                NodeSeparation = partition.Family == GraphFamily.ControlFlow ? 88 : 60,
+                ScaleX = partition.Family == GraphFamily.ControlFlow ? 1.45 : 1.24,
+                ScaleY = partition.Family == GraphFamily.ControlFlow ? 1.3 : 1.38,
+                IterationsWithMajorization = partition.Family == GraphFamily.ControlFlow ? 52 : 46,
                 EdgeRoutingSettings =
                 {
                     EdgeRoutingMode = EdgeRoutingMode.StraightLine,
@@ -1149,8 +1151,8 @@ static class GraphLayoutBuilder
             },
             _ => new SugiyamaLayoutSettings
             {
-                NodeSeparation = 40,
-                LayerSeparation = 80,
+                NodeSeparation = partition.Family == GraphFamily.ControlFlow ? 90 : 56,
+                LayerSeparation = partition.Family == GraphFamily.ControlFlow ? 132 : 112,
                 EdgeRoutingSettings =
                 {
                     EdgeRoutingMode = EdgeRoutingMode.Spline,

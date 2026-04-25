@@ -1,0 +1,136 @@
+{
+  "benchmark": "aetheria-source-tree-map",
+  "instructions": "Answer from the allowed inputs only. For image probes, inspect the PNG preview before opening JSON. Use SVG only as vector reference if needed, not as the primary image input. Do not read gold.json until after answers are written.",
+  "probes": [
+    {
+      "id": "source-top-split",
+      "graph": "source-tree",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "From the source-tree rendering, name the four major branches directly under Source Tree Map.",
+      "answerFormat": "List four note titles."
+    },
+    {
+      "id": "source-authoring-cluster",
+      "graph": "source-tree",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "Which source-tree branch owns GameData, Wwise, raw art sources, and stray authoring artifacts?",
+      "answerFormat": "Name the branch and one or two visible child notes that support the answer."
+    },
+    {
+      "id": "source-rendering-path",
+      "graph": "source-tree",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "Which visible source-tree path leads to shader and compute work?",
+      "answerFormat": "Give the path using note titles."
+    },
+    {
+      "id": "source-shared-simulation-hub",
+      "graph": "source-tree",
+      "allowedInputs": [
+        "image+json"
+      ],
+      "maxScore": 1,
+      "question": "Which non-root source-tree node appears to be a major shared-code hub, and does the JSON degree data support that impression?",
+      "answerFormat": "Name the node, describe the visual cue, then cite its degree or relative degree rank from JSON."
+    },
+    {
+      "id": "source-generated-config-branch",
+      "graph": "source-tree",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "Where does generated or local editor/build state belong in the source-tree map?",
+      "answerFormat": "Name the branch or child note."
+    },
+    {
+      "id": "control-root-children",
+      "graph": "control-flow",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "From the control-flow rendering, list the major execution-order notes attached to Control Flow Map.",
+      "answerFormat": "List as many direct major control-flow notes as the image makes readable."
+    },
+    {
+      "id": "control-central-hub",
+      "graph": "control-flow",
+      "allowedInputs": [
+        "image+json"
+      ],
+      "maxScore": 1,
+      "question": "Ignoring the root Control Flow Map node, which control-flow node is the most central hub, and how does JSON support that?",
+      "answerFormat": "Name the node and cite its degree or relative rank."
+    },
+    {
+      "id": "control-network-bridge",
+      "graph": "control-flow",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "Which two control-flow notes describe the client/server network edge?",
+      "answerFormat": "Name both notes."
+    },
+    {
+      "id": "control-player-to-simulation-chain",
+      "graph": "control-flow",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 1,
+      "question": "What visible control-flow chain carries player action toward simulation consequences?",
+      "answerFormat": "List the main note titles in order."
+    },
+    {
+      "id": "cross-economy-server-anchor",
+      "graph": "cross-view",
+      "allowedInputs": [
+        "image+json"
+      ],
+      "maxScore": 1,
+      "question": "Which source-tree note should anchor Economy Server Control Flow in a future linked-view renderer?",
+      "answerFormat": "Name the control-flow note and its source-tree anchor."
+    },
+    {
+      "id": "cross-gameplay-session-anchor",
+      "graph": "cross-view",
+      "allowedInputs": [
+        "image+json"
+      ],
+      "maxScore": 1,
+      "question": "Which source-tree note should anchor Gameplay Session Control Flow in a future linked-view renderer?",
+      "answerFormat": "Name the control-flow note and its source-tree anchor."
+    },
+    {
+      "id": "diagnostic-legibility-failures",
+      "graph": "all",
+      "allowedInputs": [
+        "image"
+      ],
+      "maxScore": 0,
+      "question": "Which labels, edge paths, clusters, or crossings were hard to read from the image alone?",
+      "answerFormat": "Freeform diagnostic notes. No score."
+    },
+    {
+      "id": "diagnostic-image-vs-json",
+      "graph": "all",
+      "allowedInputs": [
+        "image+json"
+      ],
+      "maxScore": 0,
+      "question": "What did the image make obvious, and what required JSON verification?",
+      "answerFormat": "Two short lists: image-obvious and JSON-required."
+    }
+  ]
+}

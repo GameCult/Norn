@@ -1,0 +1,125 @@
+{
+  "benchmark": "aetheria-source-tree-map",
+  "sourceMaterial": [
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Source Tree Map.md",
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Control Flow Map.md",
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Economy Server Control Flow.md",
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Unity Client\\Scripts\\Gameplay Session Control Flow.md",
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Unity Client\\Scripts\\Simulation Tick Control Flow.md",
+    "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map\\Unity Client\\Scripts\\Player Input and Weapons Control Flow.md"
+  ],
+  "probes": {
+    "source-top-split": {
+      "expected": [
+        "Unity Client",
+        "Economy Server",
+        "Data Audio and Authoring",
+        "Third Party and Config"
+      ],
+      "scoring": "Full credit for all four major branches. Half credit for three correct branches or for substituting a direct child note that clearly belongs to one branch."
+    },
+    "source-authoring-cluster": {
+      "expected": [
+        "Data Audio and Authoring",
+        "GameData",
+        "Wwise Project",
+        "Asset Sources and Root Artifacts"
+      ],
+      "scoring": "Full credit for naming Data Audio and Authoring and at least one correct child. Half credit for naming only a child without the parent branch."
+    },
+    "source-rendering-path": {
+      "expected": [
+        "Unity Client",
+        "Rendering and Content",
+        "Shaders and Compute"
+      ],
+      "scoring": "Full credit for the complete path. Half credit for identifying Shaders and Compute but missing one parent."
+    },
+    "source-shared-simulation-hub": {
+      "expected": {
+        "node": "Unity Client/Scripts/Shared Simulation",
+        "degreeRank": "Major shared-code hub in the source-tree baseline JSON. Unity Client/Scripts has the highest non-root total degree, but Shared Simulation is the key shared runtime hub.",
+        "baselineDegree": {
+          "in": 8,
+          "out": 6,
+          "total": 14
+        }
+      },
+      "scoring": "Full credit for Shared Simulation with JSON degree support. Half credit for Shared Simulation Core or Shared Behaviors if the answer explains the shared-code hub correctly but misses the exact highest-degree node."
+    },
+    "source-generated-config-branch": {
+      "expected": [
+        "Third Party and Config",
+        "Project Config Shared Math and Generated State"
+      ],
+      "scoring": "Full credit for either the parent branch plus the generated-state child, or the generated-state child alone with a clear explanation."
+    },
+    "control-root-children": {
+      "expected": [
+        "Gameplay Session Control Flow",
+        "Player Input and Weapons Control Flow",
+        "Simulation Tick Control Flow",
+        "Entity Equipment and Persistence Flow",
+        "Zone View Control Flow",
+        "Agent Combat Control Flow",
+        "Client Networking Control Flow",
+        "Economy Server Control Flow",
+        "CultCache Bootstrap and Data Load Flow",
+        "Galaxy and Zone Generation Control Flow",
+        "Narrative Placement Control Flow"
+      ],
+      "scoring": "Full credit for eight or more correct major control-flow notes with no major hallucinations. Half credit for five to seven."
+    },
+    "control-central-hub": {
+      "expected": {
+        "node": "Galaxy and Zone Generation Control Flow",
+        "degreeRank": "Highest non-root total degree in the current control-flow baseline JSON.",
+        "baselineDegree": {
+          "in": 6,
+          "out": 8,
+          "total": 14
+        }
+      },
+      "scoring": "Full credit for Galaxy and Zone Generation Control Flow with JSON degree support. Half credit for Simulation Tick Control Flow if the answer correctly identifies it as another major hub but not the top one in the current baseline."
+    },
+    "control-network-bridge": {
+      "expected": [
+        "Client Networking Control Flow",
+        "Economy Server Control Flow"
+      ],
+      "scoring": "Full credit for both notes. Half credit for naming only one side and describing the client/server network edge correctly."
+    },
+    "control-player-to-simulation-chain": {
+      "expected": [
+        "Gameplay Session Control Flow",
+        "Player Input and Weapons Control Flow",
+        "Simulation Tick Control Flow",
+        "Entity Equipment and Persistence Flow",
+        "Zone View Control Flow"
+      ],
+      "scoring": "Full credit for the core chain from gameplay session through input into simulation and equipment or rendering consequences. Half credit for a plausible partial chain with at least three correct nodes in order."
+    },
+    "cross-economy-server-anchor": {
+      "expected": {
+        "controlFlow": "Economy Server Control Flow",
+        "sourceTreeAnchor": "Economy Server"
+      },
+      "scoring": "Full credit for mapping Economy Server Control Flow to Economy Server. Half credit if the answer names Economy.Server/ files but misses the source-tree note."
+    },
+    "cross-gameplay-session-anchor": {
+      "expected": {
+        "controlFlow": "Gameplay Session Control Flow",
+        "sourceTreeAnchor": "Unity Client/Scripts/Gameplay Runtime"
+      },
+      "scoring": "Full credit for mapping Gameplay Session Control Flow to Gameplay Runtime. Half credit for naming ActionGameManager.cs or Unity Client/Scripts without the source-tree note."
+    },
+    "diagnostic-legibility-failures": {
+      "expected": "Diagnostic only.",
+      "scoring": "No score."
+    },
+    "diagnostic-image-vs-json": {
+      "expected": "Diagnostic only.",
+      "scoring": "No score."
+    }
+  }
+}

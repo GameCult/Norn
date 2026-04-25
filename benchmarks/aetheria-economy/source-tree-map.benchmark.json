@@ -1,0 +1,54 @@
+{
+  "name": "aetheria-source-tree-map",
+  "description": "Aetheria-Economy source-tree and control-flow note graph benchmark.",
+  "vaultRoot": "E:\\Projects\\Aetheria-Economy\\Aetheria\\Source Tree Map",
+  "entryNote": "Source Tree Map",
+  "includeUnreachable": false,
+  "questionsPath": "questions.json",
+  "goldPath": "gold.json",
+  "candidates": [
+    {
+      "id": "sugiyama-msagl",
+      "layout": "sugiyama",
+      "renderer": "msagl",
+      "description": "Baseline layered MSAGL layout with stock renderer."
+    },
+    {
+      "id": "sugiyama-rich",
+      "layout": "sugiyama",
+      "renderer": "rich",
+      "description": "Layered layout with custom renderer over MSAGL geometry."
+    },
+    {
+      "id": "mds-msagl",
+      "layout": "mds",
+      "renderer": "msagl",
+      "description": "Baseline MDS layout with stock renderer."
+    },
+    {
+      "id": "mds-rich",
+      "layout": "mds",
+      "renderer": "rich",
+      "description": "MDS layout with custom renderer over MSAGL geometry."
+    }
+  ],
+  "futureSweepAxes": {
+    "layout": [
+      "nodeSeparation",
+      "layerSeparation",
+      "edgeRoutingMode",
+      "aspectRatio",
+      "pinnedAnchors"
+    ],
+    "renderer": [
+      "backgroundColor",
+      "fontSize",
+      "labelWrapWidth",
+      "nodePadding",
+      "edgeOpacity",
+      "semanticPalette",
+      "clusterBoundaries"
+    ],
+    "note": "These are not all wired into the current CLI yet. Keep them in the spec so the harness has a place for them when the renderer grows up."
+  }
+}

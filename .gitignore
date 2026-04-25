@@ -5,3 +5,4 @@ out/
 nupkg/
 .vs/
 .vscode/
+node_modules/

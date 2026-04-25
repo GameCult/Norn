@@ -168,6 +168,10 @@ That keeps structurally separated note graphs from vanishing just because they n
 - `msagl`: the stock MSAGL SVG, useful as the plain baseline
 - `rich`: a custom SVG renderer that consumes MSAGL graph geometry and semantic metadata, then draws something with more visual hierarchy and less beige despair
 
+## ELK Probe
+
+There is also a small web-side `elkjs` probe under `web/elk-probe/`. It inspects which algorithms and options are actually present in the installed `elkjs` build and can relayout existing `source-tree.json` / `control-flow.json` outputs without crossing the C# boundary.
+
 ## Notes
 
 - unresolved and ambiguous links are written to `warnings.txt`

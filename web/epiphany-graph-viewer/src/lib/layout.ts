@@ -76,7 +76,7 @@ async function layoutGraph(
     id: graphKey,
     layoutOptions: {
       "elk.algorithm":
-        graphKey === "architecture" ? "org.eclipse.elk.layered" : "org.eclipse.elk.stress",
+        "org.eclipse.elk.layered",
       ...(graphKey === "architecture"
         ? {
             "elk.direction": "DOWN",
@@ -87,10 +87,15 @@ async function layoutGraph(
             "elk.padding": "[top=40,left=40,bottom=40,right=40]",
           }
         : {
-            "elk.spacing.nodeNode": "80",
+            "elk.direction": "RIGHT",
             "elk.edgeRouting": "SPLINES",
-            "elk.padding": "[top=60,left=60,bottom=60,right=60]",
-            "elk.stress.desiredEdgeLength": "128",
+            "elk.spacing.nodeNode": "88",
+            "elk.layered.spacing.nodeNodeBetweenLayers": "176",
+            "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+            "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+            "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+            "elk.layered.unnecessaryBendpoints": "true",
+            "elk.padding": "[top=72,left=84,bottom=72,right=96]",
           }),
     },
     children: nodes,

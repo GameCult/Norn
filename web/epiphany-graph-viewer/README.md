@@ -58,7 +58,7 @@ export function Screen() {
 
 - the viewer lays out each graph with `elkjs` on the client
 - `architecture` defaults to layered layout
-- `dataflow` defaults to stress layout
+- `dataflow` defaults to a rightward layered layout with wider stage spacing
 - links are exposed in the detail pane and through node badges
 - zoom gates title, purpose, and metadata visibility
 

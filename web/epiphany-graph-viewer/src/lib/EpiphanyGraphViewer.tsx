@@ -389,10 +389,16 @@ export function EpiphanyGraphViewer({
                         strokeLinejoin="round"
                         vectorEffect="non-scaling-stroke"
                       />
-                      {activeTransform.scale > 1.25 && edge.label?.trim() && (
+                      {(isSelected || isConnected || activeTransform.scale > 1.75) &&
+                        edge.label?.trim() && (
                         <g
                           transform={`translate(${edge.midpoint.x} ${edge.midpoint.y})`}
                           pointerEvents="none"
+                          opacity={
+                            isSelected || isConnected
+                              ? 1
+                              : fadeBetween(activeTransform.scale, 1.75, 2.05)
+                          }
                         >
                           <rect
                             x={-44}

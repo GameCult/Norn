@@ -6,7 +6,6 @@ import {
   useState,
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { layoutEpiphanyGraphs } from "./layout";
 import type {
@@ -54,6 +53,10 @@ export function EpiphanyGraphViewer({
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const wheelStateRef = useRef({
+    activeGraphKey,
+    transforms,
+  });
   const dragRef = useRef<{
     active: boolean;
     originX: number;
@@ -103,6 +106,37 @@ export function EpiphanyGraphViewer({
     });
     observer.observe(element);
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    wheelStateRef.current = {
+      activeGraphKey,
+      transforms,
+    };
+  }, [activeGraphKey, transforms]);
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) {
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      const {
+        activeGraphKey: currentGraphKey,
+        transforms: currentTransforms,
+      } = wheelStateRef.current;
+      handleNativeWheel(
+        event,
+        element,
+        currentGraphKey,
+        currentTransforms,
+        setTransforms,
+      );
+    };
+
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
   }, []);
 
   useEffect(() => {
@@ -256,6 +290,8 @@ export function EpiphanyGraphViewer({
             position: "relative",
             minHeight: 540,
             overflow: "hidden",
+            overscrollBehavior: "contain",
+            touchAction: "none",
             borderRadius: 28,
             background:
               activeGraphKey === "architecture"
@@ -296,9 +332,6 @@ export function EpiphanyGraphViewer({
               width="100%"
               height="100%"
               viewBox={`0 0 ${viewportSize.width || 1} ${viewportSize.height || 1}`}
-              onWheel={(event) =>
-                handleWheel(event, activeGraphKey, transforms, setTransforms)
-              }
               onPointerDown={(event) =>
                 handlePointerDown(event, activeTransform, dragRef)
               }
@@ -391,6 +424,7 @@ export function EpiphanyGraphViewer({
                   const isSelected = selectedNode?.id === node.id;
                   const isNeighbor = neighboringIds.has(node.id);
                   const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
+                  const copyLayout = buildNodeCopyLayout(node);
                   return (
                     <g
                       key={node.id}
@@ -497,39 +531,53 @@ export function EpiphanyGraphViewer({
                         </g>
                       )}
 
-                      <g opacity={fadeBetween(activeTransform.scale, 0.5, 0.82)}>
-                        <text
-                          x={44}
-                          y={26}
-                          fill="#f8fbff"
-                          fontSize={13}
-                          fontWeight={800}
-                        >
-                          {clip(node.title, 30)}
-                        </text>
-                      </g>
-
-                      <g opacity={fadeBetween(activeTransform.scale, 1.02, 1.44)}>
-                        <text
-                          x={16}
-                          y={50}
-                          fill="rgba(229, 238, 248, 0.88)"
-                          fontSize={10.6}
-                        >
-                          {clip(node.purpose, 78)}
-                        </text>
-                      </g>
-
-                      <g opacity={fadeBetween(activeTransform.scale, 1.55, 1.92)}>
-                        {node.mechanism?.trim() && (
-                          <text x={16} y={68} fill="rgba(103, 232, 249, 0.86)" fontSize={9.4}>
-                            {clip(node.mechanism, 84)}
-                          </text>
+                      <g opacity={fadeBetween(activeTransform.scale, 0.5, 0.82)} pointerEvents="none">
+                        {renderTextLines(
+                          copyLayout.titleLines,
+                          44,
+                          26,
+                          15,
+                          {
+                            fill: "#f8fbff",
+                            fontSize: 13,
+                            fontWeight: 800,
+                          },
                         )}
-                        {node.metaphor?.trim() && (
-                          <text x={16} y={84} fill="rgba(244, 114, 182, 0.84)" fontSize={9.1}>
-                            {clip(node.metaphor, 78)}
-                          </text>
+                      </g>
+
+                      <g opacity={fadeBetween(activeTransform.scale, 1.02, 1.44)} pointerEvents="none">
+                        {renderTextLines(
+                          copyLayout.purposeLines,
+                          16,
+                          copyLayout.purposeStartY,
+                          12.5,
+                          {
+                            fill: "rgba(229, 238, 248, 0.88)",
+                            fontSize: 10.6,
+                          },
+                        )}
+                      </g>
+
+                      <g opacity={fadeBetween(activeTransform.scale, 1.55, 1.92)} pointerEvents="none">
+                        {renderTextLines(
+                          copyLayout.mechanismLines,
+                          16,
+                          copyLayout.mechanismStartY,
+                          11.5,
+                          {
+                            fill: "rgba(103, 232, 249, 0.86)",
+                            fontSize: 9.4,
+                          },
+                        )}
+                        {renderTextLines(
+                          copyLayout.metaphorLines,
+                          16,
+                          copyLayout.metaphorStartY,
+                          11.2,
+                          {
+                            fill: "rgba(244, 114, 182, 0.84)",
+                            fontSize: 9.1,
+                          },
                         )}
                       </g>
                     </g>
@@ -1148,14 +1196,16 @@ function fitGraphToViewport(layout: GraphLayout, width: number, height: number):
   };
 }
 
-function handleWheel(
-  event: ReactWheelEvent<SVGSVGElement>,
+function handleNativeWheel(
+  event: WheelEvent,
+  viewportElement: HTMLElement,
   graphKey: GraphKey,
   transforms: Record<GraphKey, ViewTransform>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
 ) {
   event.preventDefault();
-  const rect = event.currentTarget.getBoundingClientRect();
+  event.stopPropagation();
+  const rect = viewportElement.getBoundingClientRect();
   const cursorX = event.clientX - rect.left;
   const cursorY = event.clientY - rect.top;
   const current = transforms[graphKey];
@@ -1291,11 +1341,149 @@ function fadeBetween(value: number, start: number, end: number) {
   return (value - start) / (end - start);
 }
 
-function clip(text: string, maxLength: number) {
-  if (text.length <= maxLength) {
-    return text;
+function buildNodeCopyLayout(node: PositionedNode) {
+  const titleWidth = Math.max(
+    108,
+    node.width - (node.status?.trim() ? 154 : 92),
+  );
+  const bodyWidth = Math.max(148, node.width - 34);
+  const titleLines = wrapTextToLines(
+    node.title,
+    estimateCharacterCapacity(titleWidth, 7.4),
+    2,
+  );
+  const purposeLines = wrapTextToLines(
+    node.purpose,
+    estimateCharacterCapacity(bodyWidth, 6.15),
+    3,
+  );
+  const mechanismLines = node.mechanism?.trim()
+    ? wrapTextToLines(
+        node.mechanism,
+        estimateCharacterCapacity(bodyWidth, 6),
+        2,
+      )
+    : [];
+  const metaphorLines = node.metaphor?.trim()
+    ? wrapTextToLines(
+        node.metaphor,
+        estimateCharacterCapacity(bodyWidth, 6),
+        2,
+      )
+    : [];
+
+  const purposeStartY = 26 + titleLines.length * 15 + 12;
+  const mechanismStartY =
+    purposeStartY + purposeLines.length * 12.5 + (purposeLines.length > 0 ? 11 : 0);
+  const metaphorStartY =
+    mechanismStartY +
+    mechanismLines.length * 11.5 +
+    (mechanismLines.length > 0 ? 9 : 0);
+
+  return {
+    titleLines,
+    purposeLines,
+    mechanismLines,
+    metaphorLines,
+    purposeStartY,
+    mechanismStartY,
+    metaphorStartY,
+  };
+}
+
+function renderTextLines(
+  lines: string[],
+  x: number,
+  startY: number,
+  lineHeight: number,
+  options: {
+    fill: string;
+    fontSize: number;
+    fontWeight?: number;
+  },
+) {
+  if (lines.length === 0) {
+    return null;
   }
-  return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
+
+  return (
+    <text
+      x={x}
+      y={startY}
+      fill={options.fill}
+      fontSize={options.fontSize}
+      fontWeight={options.fontWeight}
+    >
+      {lines.map((line, index) => (
+        <tspan key={`${startY}-${index}`} x={x} dy={index === 0 ? 0 : lineHeight}>
+          {line}
+        </tspan>
+      ))}
+    </text>
+  );
+}
+
+function wrapTextToLines(text: string, maxChars: number, maxLines: number) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  let truncated = false;
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+      continue;
+    }
+
+    if (current) {
+      lines.push(current);
+      if (lines.length === maxLines) {
+        truncated = true;
+        current = "";
+        break;
+      }
+      current = word;
+      continue;
+    }
+
+    lines.push(word.slice(0, Math.max(1, maxChars - 1)));
+    truncated = true;
+    current = "";
+    if (lines.length === maxLines) {
+      break;
+    }
+  }
+
+  if (current) {
+    if (lines.length < maxLines) {
+      lines.push(current);
+    } else {
+      truncated = true;
+    }
+  }
+
+  if (truncated && lines.length > 0) {
+    lines[lines.length - 1] = ellipsizeLine(lines[lines.length - 1], maxChars);
+  }
+
+  return lines;
+}
+
+function estimateCharacterCapacity(pixelWidth: number, averageCharWidth: number) {
+  return Math.max(12, Math.floor(pixelWidth / averageCharWidth));
+}
+
+function ellipsizeLine(text: string, maxChars: number) {
+  if (text.length < maxChars) {
+    return `${text}…`;
+  }
+  return `${text.slice(0, Math.max(1, maxChars - 1))}…`;
 }
 
 function formatCodeRef(codeRef: EpiphanyCodeRef) {

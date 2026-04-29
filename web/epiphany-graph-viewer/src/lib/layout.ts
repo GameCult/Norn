@@ -182,12 +182,61 @@ function estimateNodeSize(
   const purposeWeight = Math.min(node.purpose.length, 110);
   const widthFloor = graphKey === "architecture" ? 232 : 248;
   const width = clamp(widthFloor + titleWeight * 2.3 + purposeWeight * 0.22, widthFloor, 360);
-  const detailLines =
-    2 +
-    (node.mechanism?.trim() ? 1 : 0) +
-    (node.metaphor?.trim() ? 1 : 0);
-  const height = clamp(100 + detailLines * 16, 108, 168);
+  const titleChars = estimateCharacterCapacity(
+    width - (node.mechanism?.trim() ? 154 : 92),
+    7.4,
+  );
+  const bodyChars = estimateCharacterCapacity(width - 34, 6.1);
+  const titleLines = estimateTextLines(node.title, titleChars, 2);
+  const purposeLines = estimateTextLines(node.purpose, bodyChars, 3);
+  const mechanismLines = node.mechanism?.trim()
+    ? estimateTextLines(node.mechanism, bodyChars, 2)
+    : 0;
+  const metaphorLines = node.metaphor?.trim()
+    ? estimateTextLines(node.metaphor, bodyChars, 2)
+    : 0;
+  const height = clamp(
+    54 +
+      titleLines * 15 +
+      purposeLines * 12.5 +
+      mechanismLines * 11.5 +
+      metaphorLines * 11.2 +
+      32,
+    124,
+    196,
+  );
   return { width, height };
+}
+
+function estimateTextLines(text: string, maxChars: number, maxLines: number) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return 0;
+  }
+
+  const words = normalized.split(" ");
+  let lines = 1;
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxChars) {
+      current = candidate;
+      continue;
+    }
+
+    lines += 1;
+    current = word;
+    if (lines >= maxLines) {
+      return maxLines;
+    }
+  }
+
+  return Math.min(lines, maxLines);
+}
+
+function estimateCharacterCapacity(pixelWidth: number, averageCharWidth: number) {
+  return Math.max(12, Math.floor(pixelWidth / averageCharWidth));
 }
 
 function edgeSectionsToPoints(sections: ElkSection[]) {

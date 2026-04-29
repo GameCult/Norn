@@ -1,0 +1,295 @@
+{
+  "architecture": {
+    "nodes": [
+      {
+        "id": "arch-session-state",
+        "title": "Session state store",
+        "purpose": "Carry durable objective, graph, evidence, and churn state across turns.",
+        "mechanism": "Lives on the session and gets rehydrated when the thread wakes back up.",
+        "metaphor": "The map pinned to the workshop wall so nobody wanders off whistling.",
+        "status": "verified",
+        "code_refs": [
+          {
+            "path": "core/src/state/session.rs",
+            "start_line": 36,
+            "end_line": 121,
+            "symbol": "SessionState::epiphany_state",
+            "note": "Stored thread state"
+          }
+        ]
+      },
+      {
+        "id": "arch-prompt-renderer",
+        "title": "Prompt renderer",
+        "purpose": "Turn durable Epiphany state into a bounded instruction block for the agent.",
+        "mechanism": "Summarizes the frontier, recent evidence, and live constraints into a compact prompt fragment.",
+        "metaphor": "A folded field guide, not the whole filing cabinet.",
+        "status": "in_progress",
+        "code_refs": [
+          {
+            "path": "core/src/context/epiphany_state_instructions.rs",
+            "start_line": 1,
+            "end_line": 220,
+            "symbol": "render_epiphany_state",
+            "note": "Prompt shaping"
+          }
+        ]
+      },
+      {
+        "id": "arch-graph-promoter",
+        "title": "Graph promoter",
+        "purpose": "Promote observations and map updates into durable typed graph state.",
+        "mechanism": "Validates graph patches before they enter the session state.",
+        "metaphor": "The customs desk that stops counterfeit structure at the border.",
+        "status": "verified",
+        "code_refs": [
+          {
+            "path": "epiphany-core/src/promotion.rs",
+            "start_line": 268,
+            "end_line": 352,
+            "symbol": "validate_graphs",
+            "note": "Patch validation"
+          }
+        ]
+      },
+      {
+        "id": "arch-tool-bridge",
+        "title": "Tool bridge",
+        "purpose": "Translate model intent into tool calls without letting the prompt turn into soup.",
+        "mechanism": "Binds the runtime tool surface to the working context and execution policy.",
+        "metaphor": "The gearbox between intention and actual machinery.",
+        "status": "proposed",
+        "code_refs": [
+          {
+            "path": "vendor/codex/codex-rs/core/src/tools/mod.rs",
+            "symbol": "ToolRuntime",
+            "note": "Tool execution seam"
+          }
+        ]
+      },
+      {
+        "id": "arch-gui-shell",
+        "title": "Graph GUI shell",
+        "purpose": "Expose architecture, dataflow, and cross-links in a browsable visual surface.",
+        "mechanism": "Embeds the web viewer and routes clicks back into the rest of the application.",
+        "metaphor": "The dashboard where the workshop lights stop flickering and start admitting what they power.",
+        "status": "prototype",
+        "code_refs": [
+          {
+            "path": "gui/src/routes/graphs.tsx",
+            "symbol": "GraphRoute",
+            "note": "Planned viewer slot"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-session-renderer",
+        "source_id": "arch-session-state",
+        "target_id": "arch-prompt-renderer",
+        "kind": "renders-into",
+        "label": "bounded fragment",
+        "mechanism": "Session state is summarized into prompt context.",
+        "code_refs": [
+          {
+            "path": "vendor/codex/codex-rs/core/src/session/mod.rs",
+            "symbol": "build_initial_context",
+            "note": "Prompt assembly slot"
+          }
+        ]
+      },
+      {
+        "id": "edge-promoter-session",
+        "source_id": "arch-graph-promoter",
+        "target_id": "arch-session-state",
+        "kind": "writes",
+        "label": "validated updates",
+        "mechanism": "Promotion mutates durable state only after structural checks pass."
+      },
+      {
+        "id": "edge-tool-renderer",
+        "source_id": "arch-tool-bridge",
+        "target_id": "arch-prompt-renderer",
+        "kind": "feeds",
+        "label": "tool surface",
+        "mechanism": "The prompt renderer reflects which tools the agent can actually use."
+      },
+      {
+        "id": "edge-gui-session",
+        "source_id": "arch-gui-shell",
+        "target_id": "arch-session-state",
+        "kind": "reads",
+        "label": "typed state",
+        "mechanism": "The GUI consumes the same durable graph state the agent sees."
+      },
+      {
+        "id": "edge-gui-promoter",
+        "source_id": "arch-gui-shell",
+        "target_id": "arch-graph-promoter",
+        "kind": "inspects",
+        "label": "validation status",
+        "mechanism": "Viewer health should expose whether the underlying graph is coherent."
+      }
+    ]
+  },
+  "dataflow": {
+    "nodes": [
+      {
+        "id": "flow-observations",
+        "title": "Observations stream",
+        "purpose": "Capture recent findings and raw signals before they harden into durable structure.",
+        "mechanism": "Tool results and textual observations get queued as evidence inputs.",
+        "metaphor": "Shavings on the floor before you decide what piece of furniture you were making.",
+        "status": "verified",
+        "code_refs": [
+          {
+            "path": "epiphany-core/src/evidence.rs",
+            "symbol": "EpiphanyObservation",
+            "note": "Evidence capture"
+          }
+        ]
+      },
+      {
+        "id": "flow-proposal",
+        "title": "Graph proposal",
+        "purpose": "Stage candidate graph edits before promotion.",
+        "mechanism": "Proposals carry candidate nodes, edges, and cross-links for validation.",
+        "metaphor": "Wet concrete in the formwork, not the finished slab.",
+        "status": "verified",
+        "code_refs": [
+          {
+            "path": "epiphany-core/src/proposal.rs",
+            "symbol": "EpiphanyProposal",
+            "note": "Proposal assembly"
+          }
+        ]
+      },
+      {
+        "id": "flow-validated-graph",
+        "title": "Validated graph patch",
+        "purpose": "Produce a structurally safe graph update that can survive contact with persistence.",
+        "mechanism": "Checks required fields, reference integrity, and duplicate IDs before promotion.",
+        "metaphor": "A passport stamped by someone who actually looked at the face.",
+        "status": "verified",
+        "code_refs": [
+          {
+            "path": "epiphany-core/src/promotion.rs",
+            "start_line": 268,
+            "end_line": 352,
+            "symbol": "validate_graph",
+            "note": "Graph validation"
+          }
+        ]
+      },
+      {
+        "id": "flow-state-fragment",
+        "title": "Epiphany state fragment",
+        "purpose": "Expose the live graph frontier to the prompt without dumping the whole machine room into context.",
+        "mechanism": "Summarizes only the active map and recent changes.",
+        "metaphor": "A flashlight beam, not the sun.",
+        "status": "prototype",
+        "code_refs": [
+          {
+            "path": "core/src/context/epiphany_state_instructions.rs",
+            "symbol": "render_epiphany_state",
+            "note": "Prompt fragment"
+          }
+        ]
+      },
+      {
+        "id": "flow-agent-turn",
+        "title": "Agent turn",
+        "purpose": "Consume the bounded state and produce the next action, hypothesis, or patch.",
+        "mechanism": "The model uses the rendered map as one constraint surface among several.",
+        "metaphor": "The monkey at the lathe, but hopefully with a checklist.",
+        "status": "active",
+        "code_refs": [
+          {
+            "path": "vendor/codex/codex-rs/core/src/session/mod.rs",
+            "symbol": "run_turn",
+            "note": "Turn execution"
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-observations-proposal",
+        "source_id": "flow-observations",
+        "target_id": "flow-proposal",
+        "kind": "feeds",
+        "label": "candidate structure",
+        "mechanism": "Raw observations feed proposal generation."
+      },
+      {
+        "id": "edge-proposal-validation",
+        "source_id": "flow-proposal",
+        "target_id": "flow-validated-graph",
+        "kind": "validated-as",
+        "label": "structural checks",
+        "mechanism": "Only well-formed graph edits get promoted."
+      },
+      {
+        "id": "edge-validated-fragment",
+        "source_id": "flow-validated-graph",
+        "target_id": "flow-state-fragment",
+        "kind": "rendered-as",
+        "label": "bounded summary",
+        "mechanism": "Validated graph state is summarized into promptable form."
+      },
+      {
+        "id": "edge-fragment-turn",
+        "source_id": "flow-state-fragment",
+        "target_id": "flow-agent-turn",
+        "kind": "feeds",
+        "label": "active map",
+        "mechanism": "The current state fragment shapes the next turn."
+      },
+      {
+        "id": "edge-turn-observations",
+        "source_id": "flow-agent-turn",
+        "target_id": "flow-observations",
+        "kind": "produces",
+        "label": "new evidence",
+        "mechanism": "Actions create more observations, because life is a wheel."
+      }
+    ]
+  },
+  "links": [
+    {
+      "dataflow_node_id": "flow-state-fragment",
+      "architecture_node_id": "arch-prompt-renderer",
+      "relationship": "rendered-by",
+      "code_refs": [
+        {
+          "path": "core/src/context/epiphany_state_instructions.rs",
+          "symbol": "render_epiphany_state",
+          "note": "Renderer implementation"
+        }
+      ]
+    },
+    {
+      "dataflow_node_id": "flow-validated-graph",
+      "architecture_node_id": "arch-graph-promoter",
+      "relationship": "promoted-by",
+      "code_refs": [
+        {
+          "path": "epiphany-core/src/promotion.rs",
+          "symbol": "validate_graphs",
+          "note": "Promotion validation"
+        }
+      ]
+    },
+    {
+      "dataflow_node_id": "flow-agent-turn",
+      "architecture_node_id": "arch-tool-bridge",
+      "relationship": "executes-through"
+    },
+    {
+      "dataflow_node_id": "flow-agent-turn",
+      "architecture_node_id": "arch-gui-shell",
+      "relationship": "inspected-in"
+    }
+  ]
+}

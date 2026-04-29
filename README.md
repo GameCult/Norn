@@ -172,6 +172,32 @@ That keeps structurally separated note graphs from vanishing just because they n
 
 There is also a small web-side `elkjs` probe under `web/elk-probe/`. It inspects which algorithms and options are actually present in the installed `elkjs` build and can relayout existing `source-tree.json` / `control-flow.json` outputs without crossing the C# boundary.
 
+## Epiphany Graph Viewer
+
+There is now also a real web-side viewer package under `web/epiphany-graph-viewer/`.
+
+It consumes the typed Epiphany graph state shape directly:
+
+- `graphs.architecture`
+- `graphs.dataflow`
+- `graphs.links`
+
+and packages:
+
+- `elkjs` layout
+- zoom and pan
+- zoom-gated label and detail pop-in
+- node, edge, and code-ref inspection
+- typed cross-link browsing between architecture and dataflow
+
+Run it locally with:
+
+```powershell
+cd E:\Projects\EpiphanyGraph\web\epiphany-graph-viewer
+npm install
+npm run dev
+```
+
 ## Notes
 
 - unresolved and ambiguous links are written to `warnings.txt`

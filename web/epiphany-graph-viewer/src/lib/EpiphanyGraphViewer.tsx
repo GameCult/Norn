@@ -220,12 +220,16 @@ export function EpiphanyGraphViewer({
     };
   }, [activeGraphKey, transforms]);
 
+  const visibleLayouts = dynamicLayouts ?? layouts;
+
   useEffect(() => {
     const element = viewportRef.current;
-    if (!element || viewportSize.width <= 0 || viewportSize.height <= 0) {
+    const layout = visibleLayouts?.[activeGraphKey] ?? null;
+    if (!element || !layout || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
     const transform = transforms[activeGraphKey];
+    const bounds = nodeAabb(layout.nodes);
     element.dispatchEvent(new CustomEvent<ViewportTransformEnvelope>("epiphanygraph-viewport-transform", {
       bubbles: true,
       detail: {
@@ -235,11 +239,13 @@ export function EpiphanyGraphViewer({
         scale: transform.scale,
         width: viewportSize.width,
         height: viewportSize.height,
+        bounds,
       },
     }));
   }, [
     activeGraphKey,
     transforms,
+    visibleLayouts,
     viewportSize.height,
     viewportSize.width,
   ]);
@@ -282,7 +288,6 @@ export function EpiphanyGraphViewer({
     }));
   }, [layouts, viewportSize.height, viewportSize.width]);
 
-  const visibleLayouts = dynamicLayouts ?? layouts;
   const activeLayout = visibleLayouts?.[activeGraphKey] ?? null;
   const activeTransform = transforms[activeGraphKey];
   const compactGraph = activeLayout ? isCompactGraphLayout(activeLayout) : false;
@@ -1614,6 +1619,25 @@ function dynamicNodesFromLayout(layout: GraphLayout): DynamicNodeState[] {
   }));
 }
 
+function nodeAabb(nodes: PositionedNode[]) {
+  if (nodes.length === 0) {
+    return { x: 0, y: 0, width: 1, height: 1 };
+  }
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
+  const width = Math.max(1, maxX - minX);
+  const height = Math.max(1, maxY - minY);
+  const padding = Math.max(160, Math.min(460, Math.max(width, height) * 0.18));
+  return {
+    x: minX - padding,
+    y: minY - padding,
+    width: width + padding * 2,
+    height: height + padding * 2,
+  };
+}
+
 function stepDynamicLayouts({
   baseLayouts,
   states,
@@ -1651,6 +1675,7 @@ function stepDynamicLayouts({
   const stateLookup = new Map(graphState.map((node) => [node.id, node]));
   const strength = terrainForces.strength ?? 1;
   const damping = terrainForces.damping ?? 0.82;
+  const bounds = nodeAabb(baseLayout.nodes);
   const centerX = baseLayout.width * 0.5;
   const centerY = baseLayout.height * 0.5;
 
@@ -1669,9 +1694,12 @@ function stepDynamicLayouts({
     const sample = terrainForces.sample(screenX / Math.max(1, viewportWidth), screenY / Math.max(1, viewportHeight), {
       graphKey: activeGraphKey,
       scale: transform.scale,
+      viewX: transform.x,
+      viewY: transform.y,
       time,
       viewportWidth,
       viewportHeight,
+      bounds,
     });
     const homeX = node.x - dynamic.x;
     const homeY = node.y - dynamic.y;

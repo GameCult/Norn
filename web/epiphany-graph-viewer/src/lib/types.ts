@@ -91,14 +91,23 @@ export type ViewportTransformEnvelope = {
   scale: number;
   width: number;
   height: number;
+  bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 };
 
 export type TerrainForceContext = {
   graphKey: GraphKey;
   scale: number;
+  viewX: number;
+  viewY: number;
   time: number;
   viewportWidth: number;
   viewportHeight: number;
+  bounds: ViewportTransformEnvelope["bounds"];
 };
 
 export type TerrainForceOptions = {

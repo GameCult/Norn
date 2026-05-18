@@ -83,6 +83,8 @@ export interface EpiphanyGraphViewerProps {
   sidebarWidth?: CSSProperties["width"];
   showSidebar?: boolean;
   overlayPanels?: boolean;
+  viewportBackdrop?: ReactNode;
+  viewportBackground?: CSSProperties["background"];
   focusSelection?: boolean;
   expandedNode?: {
     graphKey: GraphKey;

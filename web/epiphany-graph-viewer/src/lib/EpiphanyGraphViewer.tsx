@@ -46,6 +46,8 @@ export function EpiphanyGraphViewer({
   sidebarWidth = 330,
   showSidebar = true,
   overlayPanels = false,
+  viewportBackdrop,
+  viewportBackground,
   focusSelection = false,
   expandedNode,
   onExpandedNodeClick,
@@ -238,8 +240,8 @@ export function EpiphanyGraphViewer({
       return;
     }
 
+    const targetScale = focusedNodeScale(selectedNode, viewportSize.width, viewportSize.height);
     const center = nodeCenter(selectedNode);
-    const targetScale = clamp(transforms[activeGraphKey].scale, 0.72, 1.08);
     setTransforms((current) => ({
       ...current,
       [activeGraphKey]: {
@@ -386,14 +388,17 @@ export function EpiphanyGraphViewer({
             overscrollBehavior: "contain",
             touchAction: "none",
             borderRadius: overlayPanels ? 0 : 28,
-            background:
+            background: viewportBackground ?? (
               activeGraphKey === "architecture"
                 ? "radial-gradient(circle at top left, rgba(8, 145, 178, 0.22), transparent 38%), linear-gradient(160deg, #08111e 0%, #0c1624 46%, #11192c 100%)"
-                : "radial-gradient(circle at top right, rgba(244, 63, 94, 0.18), transparent 34%), linear-gradient(160deg, #0b1018 0%, #15111c 44%, #1a0d18 100%)",
+                : "radial-gradient(circle at top right, rgba(244, 63, 94, 0.18), transparent 34%), linear-gradient(160deg, #0b1018 0%, #15111c 44%, #1a0d18 100%)"
+            ),
             border: overlayPanels ? "none" : PANEL_BORDER,
             boxShadow: overlayPanels ? "none" : "0 18px 54px rgba(0, 0, 0, 0.3)",
           }}
         >
+          {viewportBackdrop}
+
           <div
             className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
             style={{
@@ -708,12 +713,14 @@ export function EpiphanyGraphViewer({
               onClickCapture={onExpandedNodeClick}
               data-graph-key={activeGraphKey}
               data-node-id={selectedNode?.id}
+              data-node-stage={expandedNodeMetrics.stage}
               style={{
                 position: "absolute",
                 left: expandedNodeMetrics.left,
                 top: expandedNodeMetrics.top,
                 width: expandedNodeMetrics.width,
                 height: expandedNodeMetrics.height,
+                "--node-screen-area-ratio": expandedNodeMetrics.areaRatio,
                 zIndex: 4,
                 overflow: "auto",
                 borderRadius: 32,
@@ -1373,28 +1380,48 @@ function nodeCenter(node: PositionedNode) {
   };
 }
 
+function focusedNodeScale(node: PositionedNode, viewportWidth: number, viewportHeight: number) {
+  const targetWidth = Math.max(420, viewportWidth * 0.72);
+  const targetHeight = Math.max(360, viewportHeight * 0.74);
+  return clamp(
+    Math.min(targetWidth / Math.max(1, node.width), targetHeight / Math.max(1, node.height)),
+    0.72,
+    16,
+  );
+}
+
 function expandedNodeViewportMetrics(
   node: PositionedNode,
   transform: ViewTransform,
   viewportWidth: number,
   viewportHeight: number,
 ) {
-  const center = nodeCenter(node);
-  const screenCenter = {
-    x: transform.x + center.x * transform.scale,
-    y: transform.y + center.y * transform.scale,
-  };
-  const width = Math.min(Math.max(viewportWidth * 0.72, 560), viewportWidth - 56);
-  const height = Math.min(Math.max(viewportHeight * 0.74, 420), viewportHeight - 136);
-  const left = clamp(screenCenter.x - width / 2, 24, Math.max(24, viewportWidth - width - 24));
-  const top = clamp(screenCenter.y - height / 2, 108, Math.max(108, viewportHeight - height - 24));
+  const left = transform.x + node.x * transform.scale;
+  const top = transform.y + node.y * transform.scale;
+  const width = node.width * transform.scale;
+  const height = node.height * transform.scale;
+  const areaRatio = (width * height) / Math.max(1, viewportWidth * viewportHeight);
 
   return {
     left,
     top,
     width,
     height,
+    areaRatio,
+    stage: expandedNodeStage(width, height, areaRatio),
   };
+}
+
+function expandedNodeStage(width: number, height: number, areaRatio: number) {
+  if (width >= 680 && height >= 420 && areaRatio >= 0.22) {
+    return "article";
+  }
+
+  if (width >= 360 && height >= 190 && areaRatio >= 0.07) {
+    return "preview";
+  }
+
+  return "summary";
 }
 
 function handleNativeWheel(
@@ -1411,7 +1438,7 @@ function handleNativeWheel(
   const cursorY = event.clientY - rect.top;
   const current = transforms[graphKey];
   const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-  const nextScale = clamp(current.scale * zoomFactor, 0.28, 5.4);
+  const nextScale = clamp(current.scale * zoomFactor, 0.28, 16);
   const worldX = (cursorX - current.x) / current.scale;
   const worldY = (cursorY - current.y) / current.scale;
   const nextX = cursorX - worldX * nextScale;
@@ -1502,7 +1529,7 @@ function nudgeZoom(
     ...current,
     [graphKey]: {
       ...current[graphKey],
-      scale: clamp(current[graphKey].scale * factor, 0.28, 5.4),
+      scale: clamp(current[graphKey].scale * factor, 0.28, 16),
       userMoved: true,
     },
   }));

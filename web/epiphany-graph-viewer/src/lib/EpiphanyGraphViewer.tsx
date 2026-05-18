@@ -35,13 +35,15 @@ const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
 export function EpiphanyGraphViewer({
   state,
   initialGraph = "architecture",
+  selection: controlledSelection,
   style,
   className,
   title = "Epiphany Graph Viewer",
+  onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
   const [activeGraphKey, setActiveGraphKey] = useState<GraphKey>(initialGraph);
-  const [selection, setSelection] = useState<ViewerSelection | null>(null);
+  const [localSelection, setLocalSelection] = useState<ViewerSelection | null>(null);
   const [layouts, setLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
   const [issues, setIssues] = useState<EpiphanyValidationIssue[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -64,6 +66,20 @@ export function EpiphanyGraphViewer({
     startX: number;
     startY: number;
   } | null>(null);
+  const selection = controlledSelection === undefined ? localSelection : controlledSelection;
+  const updateSelection = (nextSelection: ViewerSelection | null) => {
+    if (controlledSelection === undefined) {
+      setLocalSelection(nextSelection);
+    }
+    onSelectionChange?.(nextSelection);
+  };
+
+  useEffect(() => {
+    if (!controlledSelection?.graphKey) {
+      return;
+    }
+    setActiveGraphKey(controlledSelection.graphKey);
+  }, [controlledSelection?.graphKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -239,7 +255,7 @@ export function EpiphanyGraphViewer({
                   startTransition(() => {
                     setActiveGraphKey("architecture");
                     if (selection?.graphKey && selection.graphKey !== "architecture") {
-                      setSelection(null);
+                      updateSelection(null);
                     }
                   })
                 }
@@ -252,7 +268,7 @@ export function EpiphanyGraphViewer({
                   startTransition(() => {
                     setActiveGraphKey("dataflow");
                     if (selection?.graphKey && selection.graphKey !== "dataflow") {
-                      setSelection(null);
+                      updateSelection(null);
                     }
                   })
                 }
@@ -342,7 +358,7 @@ export function EpiphanyGraphViewer({
               onPointerLeave={() => handlePointerUp(dragRef)}
               onClick={(event) => {
                 if (event.target === event.currentTarget) {
-                  setSelection(null);
+                  updateSelection(null);
                 }
               }}
               style={{ width: "100%", height: "100%", display: "block", cursor: dragRef.current?.active ? "grabbing" : "grab" }}
@@ -372,7 +388,7 @@ export function EpiphanyGraphViewer({
                         strokeWidth={18}
                         onClick={(event) => {
                           event.stopPropagation();
-                          setSelection({
+                          updateSelection({
                             kind: "edge",
                             graphKey: activeGraphKey,
                             edgeId: edge.resolvedId,
@@ -438,7 +454,7 @@ export function EpiphanyGraphViewer({
                       opacity={emphasis}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setSelection({
+                        updateSelection({
                           kind: "node",
                           graphKey: activeGraphKey,
                           nodeId: node.id,
@@ -710,7 +726,7 @@ export function EpiphanyGraphViewer({
               onJump={(graphKey, nodeId) => {
                 startTransition(() => {
                   setActiveGraphKey(graphKey);
-                  setSelection({ kind: "node", graphKey, nodeId });
+                  updateSelection({ kind: "node", graphKey, nodeId });
                 });
               }}
               onCodeRefSelect={(codeRef) => onCodeRefSelect?.(codeRef, { graphKey: activeGraphKey, selection })}

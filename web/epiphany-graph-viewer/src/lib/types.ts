@@ -68,9 +68,11 @@ export type ViewerSelection =
 export interface EpiphanyGraphViewerProps {
   state: EpiphanyGraphsState;
   initialGraph?: GraphKey;
+  selection?: ViewerSelection | null;
   style?: CSSProperties;
   className?: string;
   title?: string;
+  onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: EpiphanyCodeRef,
     context: {

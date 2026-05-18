@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type GraphKey = "architecture" | "dataflow";
 
@@ -77,6 +77,9 @@ export interface EpiphanyGraphViewerProps {
   title?: string;
   graphLabels?: EpiphanyGraphLabels;
   graphDescriptions?: EpiphanyGraphDescriptions;
+  sidebar?: ReactNode;
+  sidebarWidth?: CSSProperties["width"];
+  overlayPanels?: boolean;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: EpiphanyCodeRef,

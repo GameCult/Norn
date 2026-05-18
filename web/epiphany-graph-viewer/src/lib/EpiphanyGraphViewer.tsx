@@ -41,6 +41,9 @@ export function EpiphanyGraphViewer({
   title = "Epiphany Graph Viewer",
   graphLabels,
   graphDescriptions,
+  sidebar,
+  sidebarWidth = 330,
+  overlayPanels = false,
   onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
@@ -216,21 +219,26 @@ export function EpiphanyGraphViewer({
       className={className}
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 330px",
+        gridTemplateColumns: overlayPanels
+          ? "minmax(0, 1fr)"
+          : `minmax(0, 1fr) ${typeof sidebarWidth === "number" ? `${sidebarWidth}px` : sidebarWidth}`,
         gap: 16,
-        minHeight: "72vh",
+        minHeight: overlayPanels ? "100vh" : "72vh",
+        position: "relative",
+        overflow: overlayPanels ? "hidden" : undefined,
         ...style,
       }}
     >
       <div
         style={{
           display: "grid",
-          gridTemplateRows: "auto 1fr",
+          gridTemplateRows: overlayPanels ? "1fr" : "auto 1fr",
           gap: 12,
           minHeight: 0,
         }}
       >
         <header
+          className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -243,6 +251,15 @@ export function EpiphanyGraphViewer({
             border: PANEL_BORDER,
             boxShadow: "0 18px 48px rgba(0, 0, 0, 0.26)",
             backdropFilter: "blur(14px)",
+            ...(overlayPanels
+              ? {
+                  position: "absolute",
+                  top: 16,
+                  left: 16,
+                  right: 16,
+                  zIndex: 6,
+                }
+              : {}),
           }}
         >
           <div style={{ display: "grid", gap: 6 }}>
@@ -318,23 +335,24 @@ export function EpiphanyGraphViewer({
           ref={viewportRef}
           style={{
             position: "relative",
-            minHeight: 540,
+            minHeight: overlayPanels ? "100vh" : 540,
             overflow: "hidden",
             overscrollBehavior: "contain",
             touchAction: "none",
-            borderRadius: 28,
+            borderRadius: overlayPanels ? 0 : 28,
             background:
               activeGraphKey === "architecture"
                 ? "radial-gradient(circle at top left, rgba(8, 145, 178, 0.22), transparent 38%), linear-gradient(160deg, #08111e 0%, #0c1624 46%, #11192c 100%)"
                 : "radial-gradient(circle at top right, rgba(244, 63, 94, 0.18), transparent 34%), linear-gradient(160deg, #0b1018 0%, #15111c 44%, #1a0d18 100%)",
-            border: PANEL_BORDER,
-            boxShadow: "0 18px 54px rgba(0, 0, 0, 0.3)",
+            border: overlayPanels ? "none" : PANEL_BORDER,
+            boxShadow: overlayPanels ? "none" : "0 18px 54px rgba(0, 0, 0, 0.3)",
           }}
         >
           <div
+            className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
             style={{
               position: "absolute",
-              top: 14,
+              top: overlayPanels ? 102 : 14,
               left: 14,
               zIndex: 2,
               display: "grid",
@@ -626,11 +644,23 @@ export function EpiphanyGraphViewer({
       </div>
 
       <aside
+        className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
         style={{
           display: "grid",
           gridTemplateRows: "auto auto 1fr",
           gap: 12,
           minHeight: 0,
+          ...(overlayPanels
+            ? {
+                position: "absolute",
+                top: 110,
+                right: 16,
+                bottom: 16,
+                zIndex: 5,
+                width: typeof sidebarWidth === "number" ? `${sidebarWidth}px` : sidebarWidth,
+                maxWidth: "calc(100vw - 32px)",
+              }
+            : {}),
         }}
       >
         <section
@@ -731,7 +761,7 @@ export function EpiphanyGraphViewer({
             gap: 16,
           }}
         >
-          {selectedNode ? (
+          {sidebar !== undefined ? sidebar : selectedNode ? (
             <NodeDetails
               node={selectedNode}
               graphKey={activeGraphKey}

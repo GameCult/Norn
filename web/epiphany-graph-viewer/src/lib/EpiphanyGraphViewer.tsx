@@ -550,7 +550,7 @@ export function EpiphanyGraphViewer({
                           {node.badgeText}
                         </text>
 
-                        {node.status?.trim() && node.width >= 128 && node.height >= 52 && activeTransform.scale > 0.66 && (
+                        {node.status?.trim() && node.width >= 112 && node.height >= 48 && activeTransform.scale > 0.66 && (
                           <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
                           <rect
                             x={0}
@@ -576,7 +576,7 @@ export function EpiphanyGraphViewer({
                           </g>
                         )}
 
-                        {node.linkCount > 0 && node.width >= 72 && node.height >= 54 && (
+                        {node.linkCount > 0 && node.width >= 72 && node.height >= 50 && (
                           <g transform={`translate(${node.width - 30} ${node.height - 26})`}>
                           <circle
                             cx={0}
@@ -600,7 +600,7 @@ export function EpiphanyGraphViewer({
                           </g>
                         )}
 
-                        <g opacity={node.width >= 112 && node.height >= 44 ? fadeBetween(activeTransform.scale, 0.5, 0.82) : 0} pointerEvents="none">
+                        <g opacity={node.width >= 92 && node.height >= 40 ? fadeBetween(activeTransform.scale, 0.42, 0.72) : 0} pointerEvents="none">
                           {renderTextLines(
                             copyLayout.titleLines,
                             44,
@@ -614,7 +614,7 @@ export function EpiphanyGraphViewer({
                           )}
                         </g>
 
-                        <g opacity={node.width >= 180 && node.height >= 92 ? fadeBetween(activeTransform.scale, 1.02, 1.44) : 0} pointerEvents="none">
+                        <g opacity={node.width >= 136 && node.height >= 68 ? fadeBetween(activeTransform.scale, 1.02, 1.44) : 0} pointerEvents="none">
                           {renderTextLines(
                             copyLayout.purposeLines,
                             16,
@@ -627,7 +627,7 @@ export function EpiphanyGraphViewer({
                           )}
                         </g>
 
-                        <g opacity={node.width >= 230 && node.height >= 125 ? fadeBetween(activeTransform.scale, 1.55, 1.92) : 0} pointerEvents="none">
+                        <g opacity={node.width >= 190 && node.height >= 96 ? fadeBetween(activeTransform.scale, 1.72, 2.18) : 0} pointerEvents="none">
                           {renderTextLines(
                             copyLayout.mechanismLines,
                             16,
@@ -1306,7 +1306,7 @@ function handleNativeWheel(
   const cursorY = event.clientY - rect.top;
   const current = transforms[graphKey];
   const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-  const nextScale = clamp(current.scale * zoomFactor, 0.28, 2.8);
+  const nextScale = clamp(current.scale * zoomFactor, 0.28, 5.4);
   const worldX = (cursorX - current.x) / current.scale;
   const worldY = (cursorY - current.y) / current.scale;
   const nextX = cursorX - worldX * nextScale;
@@ -1397,7 +1397,7 @@ function nudgeZoom(
     ...current,
     [graphKey]: {
       ...current[graphKey],
-      scale: clamp(current[graphKey].scale * factor, 0.28, 2.8),
+      scale: clamp(current[graphKey].scale * factor, 0.28, 5.4),
       userMoved: true,
     },
   }));

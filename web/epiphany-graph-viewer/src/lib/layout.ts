@@ -114,7 +114,7 @@ async function layoutGraph(
       stroke: nodeStroke(graphKey, node.status),
     };
   });
-  const separatedNodes = resizeNodesForSeparation(positionedNodes, algorithm);
+  const separatedNodes = normalizeNodeBounds(resizeNodesForSeparation(positionedNodes, algorithm));
 
   const layoutEdgeLookup = new Map((layout.edges ?? []).map((edge, index) => [edge.id ?? `edge-${graphKey}-${index}`, edge]));
   const nodeLookup = new Map(separatedNodes.map((node) => [node.id, node]));
@@ -139,10 +139,42 @@ async function layoutGraph(
 
   return {
     graphKey,
-    width: Math.max(720, layout.width ?? 720),
-    height: Math.max(520, layout.height ?? 520),
+    width: Math.max(720, layoutBounds(separatedNodes).width, layout.width ?? 720),
+    height: Math.max(520, layoutBounds(separatedNodes).height, layout.height ?? 520),
     nodes: separatedNodes,
     edges: positionedEdges,
+  };
+}
+
+function normalizeNodeBounds(nodes: PositionedNode[]): PositionedNode[] {
+  const bounds = layoutBounds(nodes);
+  if (bounds.minX >= 0 && bounds.minY >= 0) {
+    return nodes;
+  }
+
+  const offsetX = bounds.minX < 0 ? -bounds.minX + 24 : 0;
+  const offsetY = bounds.minY < 0 ? -bounds.minY + 24 : 0;
+  return nodes.map((node) => ({
+    ...node,
+    x: node.x + offsetX,
+    y: node.y + offsetY,
+  }));
+}
+
+function layoutBounds(nodes: PositionedNode[]) {
+  if (nodes.length === 0) {
+    return { minX: 0, minY: 0, width: 0, height: 0 };
+  }
+
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
+  return {
+    minX,
+    minY,
+    width: maxX - Math.min(0, minX) + 48,
+    height: maxY - Math.min(0, minY) + 48,
   };
 }
 
@@ -151,30 +183,44 @@ function resizeNodesForSeparation(nodes: PositionedNode[], algorithm: string): P
     return nodes;
   }
 
-  const centerDistances: number[] = [];
-  for (let leftIndex = 0; leftIndex < nodes.length; leftIndex += 1) {
-    const left = nodeCenter(nodes[leftIndex]);
-    for (let rightIndex = leftIndex + 1; rightIndex < nodes.length; rightIndex += 1) {
-      const right = nodeCenter(nodes[rightIndex]);
-      const distance = Math.hypot(right.x - left.x, right.y - left.y);
-      if (Number.isFinite(distance) && distance > 1) {
-        centerDistances.push(distance);
-      }
-    }
-  }
+  const nearestDistances = nodes
+    .map((node, nodeIndex) => {
+      const center = nodeCenter(node);
+      let nearest = Number.POSITIVE_INFINITY;
 
-  if (centerDistances.length === 0) {
+      for (let otherIndex = 0; otherIndex < nodes.length; otherIndex += 1) {
+        if (otherIndex === nodeIndex) {
+          continue;
+        }
+
+        const other = nodeCenter(nodes[otherIndex]);
+        const distance = Math.hypot(other.x - center.x, other.y - center.y);
+        if (Number.isFinite(distance) && distance > 1) {
+          nearest = Math.min(nearest, distance);
+        }
+      }
+
+      return nearest;
+    })
+    .filter((distance) => Number.isFinite(distance))
+    .sort((left, right) => left - right);
+
+  if (nearestDistances.length === 0) {
     return nodes;
   }
 
-  const minimumSeparation = Math.min(...centerDistances);
-  const targetWidth = clamp(minimumSeparation * 0.72, 34, 220);
-  const targetHeight = clamp(minimumSeparation * 0.42, 24, 104);
+  const separationSampleIndex = Math.min(
+    nearestDistances.length - 1,
+    Math.max(0, Math.floor(nearestDistances.length * 0.18)),
+  );
+  const workingSeparation = nearestDistances[separationSampleIndex];
+  const targetWidth = clamp(workingSeparation * 0.88, 112, 260);
+  const targetHeight = clamp(workingSeparation * 0.48, 56, 126);
 
-  return nodes.map((node) => {
+  const resizedNodes = nodes.map((node) => {
     const center = nodeCenter(node);
-    const width = Math.min(node.width, targetWidth);
-    const height = Math.min(node.height, targetHeight);
+    const width = clamp(targetWidth, 96, Math.max(260, node.width));
+    const height = clamp(targetHeight, 48, Math.max(126, node.height));
 
     return {
       ...node,
@@ -184,6 +230,74 @@ function resizeNodesForSeparation(nodes: PositionedNode[], algorithm: string): P
       height,
     };
   });
+
+  return relaxOverlappingNodes(resizedNodes);
+}
+
+function relaxOverlappingNodes(nodes: PositionedNode[]): PositionedNode[] {
+  let relaxedNodes = nodes;
+
+  for (let pass = 0; pass < 16; pass += 1) {
+    let moved = false;
+    const offsets = new Map<string, { x: number; y: number }>(
+      relaxedNodes.map((node) => [node.id, { x: 0, y: 0 }]),
+    );
+
+    for (let leftIndex = 0; leftIndex < relaxedNodes.length; leftIndex += 1) {
+      const left = relaxedNodes[leftIndex];
+      const leftCenter = nodeCenter(left);
+
+      for (let rightIndex = leftIndex + 1; rightIndex < relaxedNodes.length; rightIndex += 1) {
+        const right = relaxedNodes[rightIndex];
+        const rightCenter = nodeCenter(right);
+        const overlapX = (left.width + right.width) / 2 + 18 - Math.abs(rightCenter.x - leftCenter.x);
+        const overlapY = (left.height + right.height) / 2 + 14 - Math.abs(rightCenter.y - leftCenter.y);
+
+        if (overlapX <= 0 || overlapY <= 0) {
+          continue;
+        }
+
+        const pushAxis = overlapX < overlapY ? "x" : "y";
+        const leftOffset = offsets.get(left.id);
+        const rightOffset = offsets.get(right.id);
+        if (!leftOffset || !rightOffset) {
+          continue;
+        }
+
+        if (pushAxis === "x") {
+          const direction = rightCenter.x >= leftCenter.x ? 1 : -1;
+          const push = overlapX / 2;
+          leftOffset.x -= direction * push;
+          rightOffset.x += direction * push;
+        } else {
+          const direction = rightCenter.y >= leftCenter.y ? 1 : -1;
+          const push = overlapY / 2;
+          leftOffset.y -= direction * push;
+          rightOffset.y += direction * push;
+        }
+        moved = true;
+      }
+    }
+
+    if (!moved) {
+      return relaxedNodes;
+    }
+
+    relaxedNodes = relaxedNodes.map((node) => {
+      const offset = offsets.get(node.id);
+      if (!offset) {
+        return node;
+      }
+
+      return {
+        ...node,
+        x: node.x + offset.x,
+        y: node.y + offset.y,
+      };
+    });
+  }
+
+  return relaxedNodes;
 }
 
 function isCompactAlgorithm(algorithm: string) {

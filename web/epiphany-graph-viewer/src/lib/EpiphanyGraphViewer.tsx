@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -488,7 +489,8 @@ export function EpiphanyGraphViewer({
                         strokeLinejoin="round"
                         vectorEffect="non-scaling-stroke"
                       />
-                      {(isSelected || isConnected || (!compactGraph && activeTransform.scale > 1.75)) &&
+                      {!expandedNodeMatches &&
+                        (isSelected || isConnected || (!compactGraph && activeTransform.scale > 1.75)) &&
                         edge.label?.trim() && (
                         <g
                           transform={`translate(${edge.midpoint.x} ${edge.midpoint.y})`}
@@ -528,6 +530,7 @@ export function EpiphanyGraphViewer({
                 {activeLayout.nodes.map((node) => {
                   const isSelected = selectedNode?.id === node.id;
                   const isNeighbor = neighboringIds.has(node.id);
+                  const isExpandedSelectedNode = expandedNodeMatches && isSelected;
                   const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
                   const copyLayout = buildNodeCopyLayout(node);
                   const clipId = `node-clip-${safeDomId(activeGraphKey)}-${safeDomId(node.id)}`;
@@ -543,7 +546,7 @@ export function EpiphanyGraphViewer({
                     <g
                       key={node.id}
                       transform={`translate(${node.x} ${node.y})`}
-                      opacity={emphasis}
+                      opacity={isExpandedSelectedNode ? 0 : emphasis}
                       onClick={(event) => {
                         event.stopPropagation();
                         updateSelection({
@@ -723,14 +726,14 @@ export function EpiphanyGraphViewer({
                 "--node-screen-area-ratio": expandedNodeMetrics.areaRatio,
                 zIndex: 4,
                 overflow: "auto",
-                borderRadius: 32,
+                borderRadius: expandedNodeMetrics.stage === "summary" ? 999 : 32,
                 background:
                   "linear-gradient(145deg, rgba(7, 22, 32, 0.96), rgba(6, 11, 23, 0.94))",
                 border: "1px solid rgba(186, 230, 253, 0.72)",
                 boxShadow:
                   "0 0 0 1px rgba(34, 211, 238, 0.16), 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 58px rgba(34, 211, 238, 0.24)",
                 pointerEvents: "auto",
-              }}
+              } as CSSProperties & { "--node-screen-area-ratio": number }}
             >
               {expandedNode.content}
             </div>

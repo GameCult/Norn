@@ -86,6 +86,7 @@ export interface EpiphanyGraphViewerProps {
   viewportBackdrop?: ReactNode;
   viewportBackground?: CSSProperties["background"];
   focusSelection?: boolean;
+  selectionFocusMode?: "preview" | "article";
   expandedNode?: {
     graphKey: GraphKey;
     nodeId: string;

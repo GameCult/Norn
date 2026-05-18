@@ -30,6 +30,8 @@ type ViewTransform = {
   userMoved: boolean;
 };
 
+type NodeFocusMode = "preview" | "article";
+
 const PANEL_SURFACE = "rgba(7, 16, 30, 0.76)";
 const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
 
@@ -50,6 +52,7 @@ export function EpiphanyGraphViewer({
   viewportBackdrop,
   viewportBackground,
   focusSelection = false,
+  selectionFocusMode = "preview",
   expandedNode,
   onExpandedNodeClick,
   onSelectionChange,
@@ -79,6 +82,7 @@ export function EpiphanyGraphViewer({
     startX: number;
     startY: number;
   } | null>(null);
+  const explicitFocusRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutAlgorithmKey = `${layoutAlgorithms?.architecture ?? ""}|${layoutAlgorithms?.dataflow ?? ""}`;
   const updateSelection = (nextSelection: ViewerSelection | null) => {
@@ -241,20 +245,24 @@ export function EpiphanyGraphViewer({
       return;
     }
 
-    const targetScale = focusedNodeScale(selectedNode, viewportSize.width, viewportSize.height);
-    const center = nodeCenter(selectedNode);
-    setTransforms((current) => ({
-      ...current,
-      [activeGraphKey]: {
-        x: viewportSize.width / 2 - center.x * targetScale,
-        y: viewportSize.height / 2 - center.y * targetScale,
-        scale: targetScale,
-        userMoved: true,
-      },
-    }));
+    const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
+    if (explicitFocusRef.current === selectionKey) {
+      explicitFocusRef.current = null;
+      return;
+    }
+
+    focusNodeInViewport(
+      selectedNode,
+      activeGraphKey,
+      selectionFocusMode,
+      viewportSize.width,
+      viewportSize.height,
+      setTransforms,
+    );
   }, [
     activeGraphKey,
     focusSelection,
+    selectionFocusMode,
     selectedNode?.id,
     selectedNode?.x,
     selectedNode?.y,
@@ -554,6 +562,36 @@ export function EpiphanyGraphViewer({
                           graphKey: activeGraphKey,
                           nodeId: node.id,
                         });
+                        explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                        if (focusSelection && viewportSize.width > 0 && viewportSize.height > 0) {
+                          focusNodeInViewport(
+                            node,
+                            activeGraphKey,
+                            "preview",
+                            viewportSize.width,
+                            viewportSize.height,
+                            setTransforms,
+                          );
+                        }
+                      }}
+                      onDoubleClick={(event) => {
+                        event.stopPropagation();
+                        updateSelection({
+                          kind: "node",
+                          graphKey: activeGraphKey,
+                          nodeId: node.id,
+                        });
+                        explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                        if (viewportSize.width > 0 && viewportSize.height > 0) {
+                          focusNodeInViewport(
+                            node,
+                            activeGraphKey,
+                            "article",
+                            viewportSize.width,
+                            viewportSize.height,
+                            setTransforms,
+                          );
+                        }
                       }}
                       style={{ cursor: "pointer" }}
                     >
@@ -1383,9 +1421,35 @@ function nodeCenter(node: PositionedNode) {
   };
 }
 
-function focusedNodeScale(node: PositionedNode, viewportWidth: number, viewportHeight: number) {
-  const targetWidth = Math.max(420, viewportWidth * 0.72);
-  const targetHeight = Math.max(360, viewportHeight * 0.74);
+function focusNodeInViewport(
+  node: PositionedNode,
+  graphKey: GraphKey,
+  mode: NodeFocusMode,
+  viewportWidth: number,
+  viewportHeight: number,
+  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+) {
+  const targetScale = focusedNodeScale(node, viewportWidth, viewportHeight, mode);
+  const center = nodeCenter(node);
+  setTransforms((current) => ({
+    ...current,
+    [graphKey]: {
+      x: viewportWidth / 2 - center.x * targetScale,
+      y: viewportHeight / 2 - center.y * targetScale,
+      scale: targetScale,
+      userMoved: true,
+    },
+  }));
+}
+
+function focusedNodeScale(
+  node: PositionedNode,
+  viewportWidth: number,
+  viewportHeight: number,
+  mode: NodeFocusMode,
+) {
+  const targetWidth = Math.max(320, viewportWidth * (mode === "article" ? 0.72 : 0.38));
+  const targetHeight = Math.max(180, viewportHeight * (mode === "article" ? 0.74 : 0.28));
   return clamp(
     Math.min(targetWidth / Math.max(1, node.width), targetHeight / Math.max(1, node.height)),
     0.72,

@@ -541,7 +541,7 @@ export function EpiphanyGraphViewer({
                         {node.badgeText}
                       </text>
 
-                      {node.status?.trim() && activeTransform.scale > 0.66 && (
+                      {node.status?.trim() && node.width >= 112 && activeTransform.scale > 0.66 && (
                         <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
                           <rect
                             x={0}
@@ -567,7 +567,7 @@ export function EpiphanyGraphViewer({
                         </g>
                       )}
 
-                      {node.linkCount > 0 && (
+                      {node.linkCount > 0 && node.width >= 52 && node.height >= 42 && (
                         <g transform={`translate(${node.width - 30} ${node.height - 26})`}>
                           <circle
                             cx={0}
@@ -591,7 +591,7 @@ export function EpiphanyGraphViewer({
                         </g>
                       )}
 
-                      <g opacity={fadeBetween(activeTransform.scale, 0.5, 0.82)} pointerEvents="none">
+                      <g opacity={node.width >= 86 ? fadeBetween(activeTransform.scale, 0.5, 0.82) : 0} pointerEvents="none">
                         {renderTextLines(
                           copyLayout.titleLines,
                           44,

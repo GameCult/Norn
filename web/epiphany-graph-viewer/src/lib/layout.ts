@@ -114,13 +114,14 @@ async function layoutGraph(
       stroke: nodeStroke(graphKey, node.status),
     };
   });
+  const separatedNodes = resizeNodesForSeparation(positionedNodes, algorithm);
 
   const layoutEdgeLookup = new Map((layout.edges ?? []).map((edge, index) => [edge.id ?? `edge-${graphKey}-${index}`, edge]));
-  const nodeLookup = new Map(positionedNodes.map((node) => [node.id, node]));
+  const nodeLookup = new Map(separatedNodes.map((node) => [node.id, node]));
   const positionedEdges: PositionedEdge[] = graph.edges.map((source, index) => {
     const resolvedId = resolveEdgeId(source, index);
     const layoutEdge = layoutEdgeLookup.get(resolvedId);
-    const points = edgeSectionsToPoints(layoutEdge?.sections ?? []);
+    const points = isCompactAlgorithm(algorithm) ? [] : edgeSectionsToPoints(layoutEdge?.sections ?? []);
     const fallbackPoints = points.length > 0 ? points : straightEdgePoints(source, nodeLookup);
     return {
       ...source,
@@ -140,8 +141,59 @@ async function layoutGraph(
     graphKey,
     width: Math.max(720, layout.width ?? 720),
     height: Math.max(520, layout.height ?? 520),
-    nodes: positionedNodes,
+    nodes: separatedNodes,
     edges: positionedEdges,
+  };
+}
+
+function resizeNodesForSeparation(nodes: PositionedNode[], algorithm: string): PositionedNode[] {
+  if (!isCompactAlgorithm(algorithm) || nodes.length < 2) {
+    return nodes;
+  }
+
+  const centerDistances: number[] = [];
+  for (let leftIndex = 0; leftIndex < nodes.length; leftIndex += 1) {
+    const left = nodeCenter(nodes[leftIndex]);
+    for (let rightIndex = leftIndex + 1; rightIndex < nodes.length; rightIndex += 1) {
+      const right = nodeCenter(nodes[rightIndex]);
+      const distance = Math.hypot(right.x - left.x, right.y - left.y);
+      if (Number.isFinite(distance) && distance > 1) {
+        centerDistances.push(distance);
+      }
+    }
+  }
+
+  if (centerDistances.length === 0) {
+    return nodes;
+  }
+
+  const minimumSeparation = Math.min(...centerDistances);
+  const targetWidth = clamp(minimumSeparation * 0.72, 34, 220);
+  const targetHeight = clamp(minimumSeparation * 0.42, 24, 104);
+
+  return nodes.map((node) => {
+    const center = nodeCenter(node);
+    const width = Math.min(node.width, targetWidth);
+    const height = Math.min(node.height, targetHeight);
+
+    return {
+      ...node,
+      x: center.x - width / 2,
+      y: center.y - height / 2,
+      width,
+      height,
+    };
+  });
+}
+
+function isCompactAlgorithm(algorithm: string) {
+  return algorithm === "org.eclipse.elk.stress" || algorithm === "org.eclipse.elk.force";
+}
+
+function nodeCenter(node: { x: number; y: number; width: number; height: number }) {
+  return {
+    x: node.x + node.width / 2,
+    y: node.y + node.height / 2,
   };
 }
 

@@ -182,6 +182,7 @@ export function EpiphanyGraphViewer({
 
   const activeLayout = layouts?.[activeGraphKey] ?? null;
   const activeTransform = transforms[activeGraphKey];
+  const compactGraph = activeLayout ? isCompactGraphLayout(activeLayout) : false;
   const selectedNode =
     selection?.kind === "node" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.nodes.find((node) => node.id === selection.nodeId) ?? null
@@ -443,7 +444,7 @@ export function EpiphanyGraphViewer({
                         strokeLinejoin="round"
                         vectorEffect="non-scaling-stroke"
                       />
-                      {(isSelected || isConnected || activeTransform.scale > 1.75) &&
+                      {(isSelected || isConnected || (!compactGraph && activeTransform.scale > 1.75)) &&
                         edge.label?.trim() && (
                         <g
                           transform={`translate(${edge.midpoint.x} ${edge.midpoint.y})`}
@@ -485,6 +486,10 @@ export function EpiphanyGraphViewer({
                   const isNeighbor = neighboringIds.has(node.id);
                   const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
                   const copyLayout = buildNodeCopyLayout(node);
+                  const clipId = `node-clip-${safeDomId(activeGraphKey)}-${safeDomId(node.id)}`;
+                  const badgeRadius = Math.max(6, Math.min(12, node.width / 4, node.height / 3));
+                  const badgeX = Math.max(badgeRadius + 4, Math.min(20, node.width / 2));
+                  const badgeY = node.height < 40 ? node.height / 2 : 20;
                   return (
                     <g
                       key={node.id}
@@ -512,37 +517,41 @@ export function EpiphanyGraphViewer({
                         vectorEffect="non-scaling-stroke"
                         filter={isSelected ? "url(#selectedGlow)" : "url(#nodeGlow)"}
                       />
-                      <rect
-                        x={6}
-                        y={6}
-                        width={node.width - 12}
-                        height={node.height - 12}
-                        rx={21}
-                        fill="rgba(255, 255, 255, 0.02)"
-                        stroke="rgba(255, 255, 255, 0.06)"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <circle
-                        cx={20}
-                        cy={20}
-                        r={12}
-                        fill={node.stroke}
-                        stroke="rgba(229, 238, 248, 0.24)"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <text
-                        x={20}
-                        y={24}
-                        textAnchor="middle"
-                        fill="#071019"
-                        fontSize={10}
-                        fontWeight={800}
-                      >
-                        {node.badgeText}
-                      </text>
+                      <clipPath id={clipId}>
+                        <rect x={0} y={0} width={node.width} height={node.height} rx={26} />
+                      </clipPath>
+                      <g clipPath={`url(#${clipId})`}>
+                        <rect
+                          x={6}
+                          y={6}
+                          width={Math.max(0, node.width - 12)}
+                          height={Math.max(0, node.height - 12)}
+                          rx={21}
+                          fill="rgba(255, 255, 255, 0.02)"
+                          stroke="rgba(255, 255, 255, 0.06)"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <circle
+                          cx={badgeX}
+                          cy={badgeY}
+                          r={badgeRadius}
+                          fill={node.stroke}
+                          stroke="rgba(229, 238, 248, 0.24)"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <text
+                          x={badgeX}
+                          y={badgeY + badgeRadius * 0.34}
+                          textAnchor="middle"
+                          fill="#071019"
+                          fontSize={Math.max(6, badgeRadius * 0.82)}
+                          fontWeight={800}
+                        >
+                          {node.badgeText}
+                        </text>
 
-                      {node.status?.trim() && node.width >= 112 && activeTransform.scale > 0.66 && (
-                        <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
+                        {node.status?.trim() && node.width >= 128 && node.height >= 52 && activeTransform.scale > 0.66 && (
+                          <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
                           <rect
                             x={0}
                             y={0}
@@ -564,11 +573,11 @@ export function EpiphanyGraphViewer({
                           >
                             {node.status.toUpperCase()}
                           </text>
-                        </g>
-                      )}
+                          </g>
+                        )}
 
-                      {node.linkCount > 0 && node.width >= 52 && node.height >= 42 && (
-                        <g transform={`translate(${node.width - 30} ${node.height - 26})`}>
+                        {node.linkCount > 0 && node.width >= 72 && node.height >= 54 && (
+                          <g transform={`translate(${node.width - 30} ${node.height - 26})`}>
                           <circle
                             cx={0}
                             cy={0}
@@ -588,57 +597,58 @@ export function EpiphanyGraphViewer({
                           >
                             {node.linkCount}
                           </text>
+                          </g>
+                        )}
+
+                        <g opacity={node.width >= 112 && node.height >= 44 ? fadeBetween(activeTransform.scale, 0.5, 0.82) : 0} pointerEvents="none">
+                          {renderTextLines(
+                            copyLayout.titleLines,
+                            44,
+                            26,
+                            15,
+                            {
+                              fill: "#f8fbff",
+                              fontSize: 13,
+                              fontWeight: 800,
+                            },
+                          )}
                         </g>
-                      )}
 
-                      <g opacity={node.width >= 86 ? fadeBetween(activeTransform.scale, 0.5, 0.82) : 0} pointerEvents="none">
-                        {renderTextLines(
-                          copyLayout.titleLines,
-                          44,
-                          26,
-                          15,
-                          {
-                            fill: "#f8fbff",
-                            fontSize: 13,
-                            fontWeight: 800,
-                          },
-                        )}
-                      </g>
+                        <g opacity={node.width >= 180 && node.height >= 92 ? fadeBetween(activeTransform.scale, 1.02, 1.44) : 0} pointerEvents="none">
+                          {renderTextLines(
+                            copyLayout.purposeLines,
+                            16,
+                            copyLayout.purposeStartY,
+                            12.5,
+                            {
+                              fill: "rgba(229, 238, 248, 0.88)",
+                              fontSize: 10.6,
+                            },
+                          )}
+                        </g>
 
-                      <g opacity={fadeBetween(activeTransform.scale, 1.02, 1.44)} pointerEvents="none">
-                        {renderTextLines(
-                          copyLayout.purposeLines,
-                          16,
-                          copyLayout.purposeStartY,
-                          12.5,
-                          {
-                            fill: "rgba(229, 238, 248, 0.88)",
-                            fontSize: 10.6,
-                          },
-                        )}
-                      </g>
-
-                      <g opacity={fadeBetween(activeTransform.scale, 1.55, 1.92)} pointerEvents="none">
-                        {renderTextLines(
-                          copyLayout.mechanismLines,
-                          16,
-                          copyLayout.mechanismStartY,
-                          11.5,
-                          {
-                            fill: "rgba(103, 232, 249, 0.86)",
-                            fontSize: 9.4,
-                          },
-                        )}
-                        {renderTextLines(
-                          copyLayout.metaphorLines,
-                          16,
-                          copyLayout.metaphorStartY,
-                          11.2,
-                          {
-                            fill: "rgba(244, 114, 182, 0.84)",
-                            fontSize: 9.1,
-                          },
-                        )}
+                        <g opacity={node.width >= 230 && node.height >= 125 ? fadeBetween(activeTransform.scale, 1.55, 1.92) : 0} pointerEvents="none">
+                          {renderTextLines(
+                            copyLayout.mechanismLines,
+                            16,
+                            copyLayout.mechanismStartY,
+                            11.5,
+                            {
+                              fill: "rgba(103, 232, 249, 0.86)",
+                              fontSize: 9.4,
+                            },
+                          )}
+                          {renderTextLines(
+                            copyLayout.metaphorLines,
+                            16,
+                            copyLayout.metaphorStartY,
+                            11.2,
+                            {
+                              fill: "rgba(244, 114, 182, 0.84)",
+                              fontSize: 9.1,
+                            },
+                          )}
+                        </g>
                       </g>
                     </g>
                   );
@@ -1415,6 +1425,20 @@ function nodeOpacity(
     return 1;
   }
   return 0.36;
+}
+
+function isCompactGraphLayout(layout: GraphLayout) {
+  if (layout.nodes.length === 0) {
+    return false;
+  }
+
+  const widths = layout.nodes.map((node) => node.width).sort((left, right) => left - right);
+  const medianWidth = widths[Math.floor(widths.length / 2)] ?? 0;
+  return medianWidth < 96;
+}
+
+function safeDomId(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
 function fadeBetween(value: number, start: number, end: number) {

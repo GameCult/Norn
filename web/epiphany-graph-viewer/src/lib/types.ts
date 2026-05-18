@@ -50,6 +50,7 @@ export interface EpiphanyGraphsState {
 
 export type EpiphanyGraphLabels = Partial<Record<GraphKey, string>>;
 export type EpiphanyGraphDescriptions = Partial<Record<GraphKey, string>>;
+export type EpiphanyGraphLayoutAlgorithms = Partial<Record<GraphKey, string>>;
 
 export interface EpiphanyValidationIssue {
   scope: string;
@@ -77,6 +78,7 @@ export interface EpiphanyGraphViewerProps {
   title?: string;
   graphLabels?: EpiphanyGraphLabels;
   graphDescriptions?: EpiphanyGraphDescriptions;
+  layoutAlgorithms?: EpiphanyGraphLayoutAlgorithms;
   sidebar?: ReactNode;
   sidebarWidth?: CSSProperties["width"];
   overlayPanels?: boolean;

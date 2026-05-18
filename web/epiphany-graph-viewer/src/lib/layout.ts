@@ -4,6 +4,7 @@ import type {
   EpiphanyGraphEdge,
   EpiphanyGraphLink,
   EpiphanyGraphsState,
+  EpiphanyGraphLayoutAlgorithms,
   GraphKey,
   GraphLayout,
   PositionedEdge,
@@ -41,10 +42,11 @@ type ElkLayoutGraph = {
 
 export async function layoutEpiphanyGraphs(
   state: EpiphanyGraphsState,
+  algorithms: EpiphanyGraphLayoutAlgorithms = {},
 ): Promise<Record<GraphKey, GraphLayout>> {
   const [architecture, dataflow] = await Promise.all([
-    layoutGraph("architecture", state.architecture, state.links),
-    layoutGraph("dataflow", state.dataflow, state.links),
+    layoutGraph("architecture", state.architecture, state.links, algorithms.architecture),
+    layoutGraph("dataflow", state.dataflow, state.links, algorithms.dataflow),
   ]);
 
   return { architecture, dataflow };
@@ -54,6 +56,7 @@ async function layoutGraph(
   graphKey: GraphKey,
   graph: EpiphanyGraph,
   links: EpiphanyGraphLink[],
+  algorithm = "org.eclipse.elk.layered",
 ): Promise<GraphLayout> {
   const nodeDegrees = buildNodeDegrees(graph);
   const linkCounts = buildLinkCounts(graphKey, links);
@@ -75,28 +78,8 @@ async function layoutGraph(
   const elkGraph = {
     id: graphKey,
     layoutOptions: {
-      "elk.algorithm":
-        "org.eclipse.elk.layered",
-      ...(graphKey === "architecture"
-        ? {
-            "elk.direction": "DOWN",
-            "elk.edgeRouting": "SPLINES",
-            "elk.spacing.nodeNode": "48",
-            "elk.layered.spacing.nodeNodeBetweenLayers": "88",
-            "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-            "elk.padding": "[top=40,left=40,bottom=40,right=40]",
-          }
-        : {
-            "elk.direction": "RIGHT",
-            "elk.edgeRouting": "SPLINES",
-            "elk.spacing.nodeNode": "88",
-            "elk.layered.spacing.nodeNodeBetweenLayers": "176",
-            "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-            "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-            "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-            "elk.layered.unnecessaryBendpoints": "true",
-            "elk.padding": "[top=72,left=84,bottom=72,right=96]",
-          }),
+      "elk.algorithm": algorithm,
+      ...layoutOptionsFor(graphKey, algorithm),
     },
     children: nodes,
     edges,
@@ -125,11 +108,13 @@ async function layoutGraph(
     };
   });
 
-  const edgeLookup = new Map(graph.edges.map((edge, index) => [resolveEdgeId(edge, index), edge]));
-  const positionedEdges: PositionedEdge[] = (layout.edges ?? []).map((edge, index) => {
-    const resolvedId = edge.id ?? `edge-${graphKey}-${index}`;
-    const source = edgeLookup.get(resolvedId) ?? graph.edges[index];
-    const points = edgeSectionsToPoints(edge.sections ?? []);
+  const layoutEdgeLookup = new Map((layout.edges ?? []).map((edge, index) => [edge.id ?? `edge-${graphKey}-${index}`, edge]));
+  const nodeLookup = new Map(positionedNodes.map((node) => [node.id, node]));
+  const positionedEdges: PositionedEdge[] = graph.edges.map((source, index) => {
+    const resolvedId = resolveEdgeId(source, index);
+    const layoutEdge = layoutEdgeLookup.get(resolvedId);
+    const points = edgeSectionsToPoints(layoutEdge?.sections ?? []);
+    const fallbackPoints = points.length > 0 ? points : straightEdgePoints(source, nodeLookup);
     return {
       ...source,
       id: source.id ?? null,
@@ -138,9 +123,9 @@ async function layoutGraph(
       code_refs: source.code_refs ?? [],
       graphKey,
       resolvedId,
-      points,
-      path: pointsToPath(points),
-      midpoint: edgeMidpoint(points),
+      points: fallbackPoints,
+      path: pointsToPath(fallbackPoints),
+      midpoint: edgeMidpoint(fallbackPoints),
     };
   });
 
@@ -151,6 +136,51 @@ async function layoutGraph(
     nodes: positionedNodes,
     edges: positionedEdges,
   };
+}
+
+function layoutOptionsFor(graphKey: GraphKey, algorithm: string): Record<string, string> {
+  if (algorithm === "org.eclipse.elk.stress") {
+    return {
+      "elk.padding": "[top=96,left=96,bottom=96,right=96]",
+      "elk.spacing.nodeNode": graphKey === "architecture" ? "96" : "128",
+      "elk.stress.desiredEdgeLength": graphKey === "architecture" ? "260" : "340",
+      "elk.stress.iterationLimit": graphKey === "architecture" ? "240" : "180",
+      "elk.stress.epsilon": "0.0001",
+    };
+  }
+
+  if (algorithm === "org.eclipse.elk.force") {
+    return {
+      "elk.padding": "[top=96,left=96,bottom=96,right=96]",
+      "elk.spacing.nodeNode": graphKey === "architecture" ? "96" : "132",
+      "elk.force.model": "FRUCHTERMAN_REINGOLD",
+      "elk.force.iterations": graphKey === "architecture" ? "650" : "360",
+      "elk.force.repulsion": graphKey === "architecture" ? "72" : "120",
+      "elk.force.temperature": "0.1",
+      "elk.randomSeed": "17",
+    };
+  }
+
+  return graphKey === "architecture"
+    ? {
+        "elk.direction": "DOWN",
+        "elk.edgeRouting": "SPLINES",
+        "elk.spacing.nodeNode": "48",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "88",
+        "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+        "elk.padding": "[top=40,left=40,bottom=40,right=40]",
+      }
+    : {
+        "elk.direction": "RIGHT",
+        "elk.edgeRouting": "SPLINES",
+        "elk.spacing.nodeNode": "88",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "176",
+        "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+        "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+        "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+        "elk.layered.unnecessaryBendpoints": "true",
+        "elk.padding": "[top=72,left=84,bottom=72,right=96]",
+      };
 }
 
 function buildNodeDegrees(graph: EpiphanyGraph) {
@@ -258,6 +288,29 @@ function edgeSectionsToPoints(sections: ElkSection[]) {
     }
   }
   return dedupeSequentialPoints(points);
+}
+
+function straightEdgePoints(
+  edge: EpiphanyGraphEdge,
+  nodes: Map<string, PositionedNode>,
+) {
+  const source = nodes.get(edge.source_id);
+  const target = nodes.get(edge.target_id);
+
+  if (!source || !target) {
+    return [];
+  }
+
+  return [
+    {
+      x: source.x + source.width / 2,
+      y: source.y + source.height / 2,
+    },
+    {
+      x: target.x + target.width / 2,
+      y: target.y + target.height / 2,
+    },
+  ];
 }
 
 function pointsToPath(points: PositionedPoint[]) {

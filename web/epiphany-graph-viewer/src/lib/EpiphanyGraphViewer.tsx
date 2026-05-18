@@ -41,6 +41,7 @@ export function EpiphanyGraphViewer({
   title = "Epiphany Graph Viewer",
   graphLabels,
   graphDescriptions,
+  layoutAlgorithms,
   sidebar,
   sidebarWidth = 330,
   overlayPanels = false,
@@ -92,7 +93,7 @@ export function EpiphanyGraphViewer({
     setErrorMessage(null);
     setIssues(validateEpiphanyGraphsState(state));
 
-    layoutEpiphanyGraphs(state)
+    layoutEpiphanyGraphs(state, layoutAlgorithms)
       .then((nextLayouts) => {
         if (cancelled) {
           return;
@@ -111,7 +112,7 @@ export function EpiphanyGraphViewer({
     return () => {
       cancelled = true;
     };
-  }, [state]);
+  }, [layoutAlgorithms, state]);
 
   useLayoutEffect(() => {
     const element = viewportRef.current;

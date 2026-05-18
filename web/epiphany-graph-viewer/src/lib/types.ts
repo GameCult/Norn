@@ -84,6 +84,15 @@ export type NodeEnvelope = {
   strength: number;
 };
 
+export type ViewportTransformEnvelope = {
+  graphKey: GraphKey;
+  x: number;
+  y: number;
+  scale: number;
+  width: number;
+  height: number;
+};
+
 export type TerrainForceContext = {
   graphKey: GraphKey;
   scale: number;

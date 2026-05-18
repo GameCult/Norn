@@ -22,6 +22,7 @@ import type {
   PositionedPoint,
   TerrainForceOptions,
   ViewerSelection,
+  ViewportTransformEnvelope,
 } from "./types";
 import { validateEpiphanyGraphsState } from "./validation";
 
@@ -208,6 +209,30 @@ export function EpiphanyGraphViewer({
       transforms,
     };
   }, [activeGraphKey, transforms]);
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+    const transform = transforms[activeGraphKey];
+    element.dispatchEvent(new CustomEvent<ViewportTransformEnvelope>("epiphanygraph-viewport-transform", {
+      bubbles: true,
+      detail: {
+        graphKey: activeGraphKey,
+        x: transform.x,
+        y: transform.y,
+        scale: transform.scale,
+        width: viewportSize.width,
+        height: viewportSize.height,
+      },
+    }));
+  }, [
+    activeGraphKey,
+    transforms,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   useEffect(() => {
     const element = viewportRef.current;

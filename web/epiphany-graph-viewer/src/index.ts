@@ -15,5 +15,6 @@ export type {
   TerrainForceContext,
   TerrainForceOptions,
   TerrainForceSample,
+  ViewportTransformEnvelope,
   ViewerSelection,
 } from "./lib/types";

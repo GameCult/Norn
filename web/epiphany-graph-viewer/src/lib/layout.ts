@@ -40,13 +40,19 @@ type ElkLayoutGraph = {
   edges?: ElkLayoutEdge[];
 };
 
+type LayoutViewport = {
+  width: number;
+  height: number;
+};
+
 export async function layoutEpiphanyGraphs(
   state: EpiphanyGraphsState,
   algorithms: EpiphanyGraphLayoutAlgorithms = {},
+  viewport?: LayoutViewport,
 ): Promise<Record<GraphKey, GraphLayout>> {
   const [architecture, dataflow] = await Promise.all([
-    layoutGraph("architecture", state.architecture, state.links, algorithms.architecture),
-    layoutGraph("dataflow", state.dataflow, state.links, algorithms.dataflow),
+    layoutGraph("architecture", state.architecture, state.links, algorithms.architecture, viewport),
+    layoutGraph("dataflow", state.dataflow, state.links, algorithms.dataflow, viewport),
   ]);
 
   return { architecture, dataflow };
@@ -57,11 +63,12 @@ async function layoutGraph(
   graph: EpiphanyGraph,
   links: EpiphanyGraphLink[],
   algorithm = "org.eclipse.elk.layered",
+  viewport?: LayoutViewport,
 ): Promise<GraphLayout> {
   const nodeDegrees = buildNodeDegrees(graph);
   const linkCounts = buildLinkCounts(graphKey, links);
   const nodes = graph.nodes.map((node) => {
-    const size = estimateNodeSize(node, graphKey);
+    const size = estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport);
     return {
       id: node.id,
       width: size.width,
@@ -98,8 +105,8 @@ async function layoutGraph(
       graphKey,
       x: child?.x ?? 0,
       y: child?.y ?? 0,
-      width: child?.width ?? estimateNodeSize(node, graphKey).width,
-      height: child?.height ?? estimateNodeSize(node, graphKey).height,
+      width: child?.width ?? estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport).width,
+      height: child?.height ?? estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport).height,
       degree,
       linkCount,
       badgeText: nodeBadgeText(node.title),
@@ -212,25 +219,38 @@ function resolveEdgeId(edge: EpiphanyGraphEdge, index: number) {
 function estimateNodeSize(
   node: { title: string; purpose: string; mechanism?: string | null; metaphor?: string | null },
   graphKey: GraphKey,
+  algorithm: string,
+  nodeCount: number,
+  viewport?: LayoutViewport,
 ) {
+  const compact = algorithm === "org.eclipse.elk.stress" || algorithm === "org.eclipse.elk.force";
+  const densityScale = compact ? graphDensityScale(nodeCount, viewport) : 1;
   const titleWeight = Math.min(node.title.length, 36);
   const purposeWeight = Math.min(node.purpose.length, 110);
   const widthFloor = graphKey === "architecture" ? 232 : 248;
-  const width = clamp(widthFloor + titleWeight * 2.3 + purposeWeight * 0.22, widthFloor, 360);
+  const compactWidthFloor = graphKey === "architecture" ? 128 : 154;
+  const compactWidthCeiling = graphKey === "architecture" ? 248 : 280;
+  const layeredWidth = clamp(widthFloor + titleWeight * 2.3 + purposeWeight * 0.22, widthFloor, 360);
+  const compactWidth = clamp(
+    (compactWidthFloor + titleWeight * 1.8 + purposeWeight * 0.12) * densityScale,
+    compactWidthFloor,
+    compactWidthCeiling,
+  );
+  const width = compact ? compactWidth : layeredWidth;
   const titleChars = estimateCharacterCapacity(
-    width - (node.mechanism?.trim() ? 154 : 92),
+    compact ? width - 44 : width - (node.mechanism?.trim() ? 154 : 92),
     7.4,
   );
   const bodyChars = estimateCharacterCapacity(width - 34, 6.1);
   const titleLines = estimateTextLines(node.title, titleChars, 2);
-  const purposeLines = estimateTextLines(node.purpose, bodyChars, 3);
+  const purposeLines = estimateTextLines(node.purpose, bodyChars, compact ? 1 : 3);
   const mechanismLines = node.mechanism?.trim()
-    ? estimateTextLines(node.mechanism, bodyChars, 2)
+    ? estimateTextLines(node.mechanism, bodyChars, compact ? 0 : 2)
     : 0;
   const metaphorLines = node.metaphor?.trim()
-    ? estimateTextLines(node.metaphor, bodyChars, 2)
+    ? estimateTextLines(node.metaphor, bodyChars, compact ? 0 : 2)
     : 0;
-  const height = clamp(
+  const layeredHeight = clamp(
     54 +
       titleLines * 15 +
       purposeLines * 12.5 +
@@ -240,10 +260,30 @@ function estimateNodeSize(
     124,
     196,
   );
+  const compactHeight = clamp(
+    (40 + titleLines * 14 + purposeLines * 11 + 18) * densityScale,
+    64,
+    graphKey === "architecture" ? 116 : 132,
+  );
+  const height = compact ? compactHeight : layeredHeight;
   return { width, height };
 }
 
+function graphDensityScale(nodeCount: number, viewport?: LayoutViewport) {
+  if (!viewport || viewport.width <= 0 || viewport.height <= 0 || nodeCount <= 0) {
+    return 0.72;
+  }
+
+  const availableArea = viewport.width * viewport.height;
+  const nodeSlotArea = availableArea / nodeCount;
+  return clamp(Math.sqrt(nodeSlotArea / 34_000), 0.54, 0.92);
+}
+
 function estimateTextLines(text: string, maxChars: number, maxLines: number) {
+  if (maxLines <= 0) {
+    return 0;
+  }
+
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) {
     return 0;

@@ -73,6 +73,7 @@ export function EpiphanyGraphViewer({
     startY: number;
   } | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
+  const layoutAlgorithmKey = `${layoutAlgorithms?.architecture ?? ""}|${layoutAlgorithms?.dataflow ?? ""}`;
   const updateSelection = (nextSelection: ViewerSelection | null) => {
     if (controlledSelection === undefined) {
       setLocalSelection(nextSelection);
@@ -93,7 +94,11 @@ export function EpiphanyGraphViewer({
     setErrorMessage(null);
     setIssues(validateEpiphanyGraphsState(state));
 
-    layoutEpiphanyGraphs(state, layoutAlgorithms)
+    layoutEpiphanyGraphs(
+      state,
+      layoutAlgorithms,
+      viewportSize.width > 0 && viewportSize.height > 0 ? viewportSize : undefined,
+    )
       .then((nextLayouts) => {
         if (cancelled) {
           return;
@@ -112,7 +117,7 @@ export function EpiphanyGraphViewer({
     return () => {
       cancelled = true;
     };
-  }, [layoutAlgorithms, state]);
+  }, [layoutAlgorithmKey, state, viewportSize.height, viewportSize.width]);
 
   useLayoutEffect(() => {
     const element = viewportRef.current;

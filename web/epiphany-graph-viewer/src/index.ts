@@ -11,5 +11,9 @@ export type {
   EpiphanyGraphViewerProps,
   EpiphanyValidationIssue,
   GraphKey,
+  NodeEnvelope,
+  TerrainForceContext,
+  TerrainForceOptions,
+  TerrainForceSample,
   ViewerSelection,
 } from "./lib/types";

@@ -69,6 +69,37 @@ export type ViewerSelection =
       edgeId: string;
     };
 
+export type TerrainForceSample = {
+  flowX: number;
+  flowY: number;
+  strength: number;
+  curvature: number;
+};
+
+export type NodeEnvelope = {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  strength: number;
+};
+
+export type TerrainForceContext = {
+  graphKey: GraphKey;
+  scale: number;
+  time: number;
+  viewportWidth: number;
+  viewportHeight: number;
+};
+
+export type TerrainForceOptions = {
+  sample: (x: number, y: number, context: TerrainForceContext) => TerrainForceSample;
+  strength?: number;
+  damping?: number;
+  envelopeStrength?: number;
+  emitNodeEnvelopes?: boolean;
+};
+
 export interface EpiphanyGraphViewerProps {
   state: EpiphanyGraphsState;
   initialGraph?: GraphKey;
@@ -85,6 +116,7 @@ export interface EpiphanyGraphViewerProps {
   overlayPanels?: boolean;
   viewportBackdrop?: ReactNode;
   viewportBackground?: CSSProperties["background"];
+  terrainForces?: TerrainForceOptions;
   focusSelection?: boolean;
   selectionFocusMode?: "preview" | "article";
   expandedNode?: {

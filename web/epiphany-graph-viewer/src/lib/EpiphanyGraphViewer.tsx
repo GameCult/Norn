@@ -16,9 +16,11 @@ import type {
   EpiphanyValidationIssue,
   GraphKey,
   GraphLayout,
+  NodeEnvelope,
   PositionedEdge,
   PositionedNode,
   PositionedPoint,
+  TerrainForceOptions,
   ViewerSelection,
 } from "./types";
 import { validateEpiphanyGraphsState } from "./validation";
@@ -31,6 +33,14 @@ type ViewTransform = {
 };
 
 type NodeFocusMode = "preview" | "article";
+
+type DynamicNodeState = {
+  id: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+};
 
 const PANEL_SURFACE = "rgba(7, 16, 30, 0.76)";
 const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
@@ -51,6 +61,7 @@ export function EpiphanyGraphViewer({
   overlayPanels = false,
   viewportBackdrop,
   viewportBackground,
+  terrainForces,
   focusSelection = false,
   selectionFocusMode = "preview",
   expandedNode,
@@ -61,6 +72,7 @@ export function EpiphanyGraphViewer({
   const [activeGraphKey, setActiveGraphKey] = useState<GraphKey>(initialGraph);
   const [localSelection, setLocalSelection] = useState<ViewerSelection | null>(null);
   const [layouts, setLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
+  const [dynamicLayouts, setDynamicLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
   const [issues, setIssues] = useState<EpiphanyValidationIssue[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,6 +83,7 @@ export function EpiphanyGraphViewer({
   });
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const dynamicStateRef = useRef<Record<GraphKey, DynamicNodeState[]> | null>(null);
   const wheelStateRef = useRef({
     activeGraphKey,
     transforms,
@@ -115,6 +128,11 @@ export function EpiphanyGraphViewer({
           return;
         }
         setLayouts(nextLayouts);
+        setDynamicLayouts(nextLayouts);
+        dynamicStateRef.current = {
+          architecture: dynamicNodesFromLayout(nextLayouts.architecture),
+          dataflow: dynamicNodesFromLayout(nextLayouts.dataflow),
+        };
         setStatus("ready");
       })
       .catch((error) => {
@@ -129,6 +147,44 @@ export function EpiphanyGraphViewer({
       cancelled = true;
     };
   }, [layoutAlgorithmKey, state, viewportSize.height, viewportSize.width]);
+
+  useEffect(() => {
+    if (!terrainForces || !layouts || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+
+    let frameId = 0;
+    let lastTime = performance.now();
+    const tick = (time: number) => {
+      const dt = Math.min(0.034, Math.max(0.001, (time - lastTime) / 1000));
+      lastTime = time;
+      const next = stepDynamicLayouts({
+        baseLayouts: layouts,
+        states: dynamicStateRef,
+        activeGraphKey,
+        transforms,
+        terrainForces,
+        viewportElement: viewportRef.current,
+        viewportWidth: viewportSize.width,
+        viewportHeight: viewportSize.height,
+        dt,
+        time: time / 1000,
+      });
+      if (next) {
+        setDynamicLayouts(next.layouts);
+      }
+      frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [
+    activeGraphKey,
+    layouts,
+    terrainForces,
+    transforms,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   useLayoutEffect(() => {
     const element = viewportRef.current;
@@ -191,7 +247,8 @@ export function EpiphanyGraphViewer({
     }));
   }, [layouts, viewportSize.height, viewportSize.width]);
 
-  const activeLayout = layouts?.[activeGraphKey] ?? null;
+  const visibleLayouts = dynamicLayouts ?? layouts;
+  const activeLayout = visibleLayouts?.[activeGraphKey] ?? null;
   const activeTransform = transforms[activeGraphKey];
   const compactGraph = activeLayout ? isCompactGraphLayout(activeLayout) : false;
   const selectedNode =
@@ -1419,6 +1476,190 @@ function nodeCenter(node: PositionedNode) {
     x: node.x + node.width / 2,
     y: node.y + node.height / 2,
   };
+}
+
+function dynamicNodesFromLayout(layout: GraphLayout): DynamicNodeState[] {
+  return layout.nodes.map((node) => ({
+    id: node.id,
+    x: node.x,
+    y: node.y,
+    vx: 0,
+    vy: 0,
+  }));
+}
+
+function stepDynamicLayouts({
+  baseLayouts,
+  states,
+  activeGraphKey,
+  transforms,
+  terrainForces,
+  viewportElement,
+  viewportWidth,
+  viewportHeight,
+  dt,
+  time,
+}: {
+  baseLayouts: Record<GraphKey, GraphLayout>;
+  states: React.MutableRefObject<Record<GraphKey, DynamicNodeState[]> | null>;
+  activeGraphKey: GraphKey;
+  transforms: Record<GraphKey, ViewTransform>;
+  terrainForces: TerrainForceOptions;
+  viewportElement: HTMLElement | null;
+  viewportWidth: number;
+  viewportHeight: number;
+  dt: number;
+  time: number;
+}): { layouts: Record<GraphKey, GraphLayout> } | null {
+  if (!states.current) {
+    states.current = {
+      architecture: dynamicNodesFromLayout(baseLayouts.architecture),
+      dataflow: dynamicNodesFromLayout(baseLayouts.dataflow),
+    };
+  }
+
+  const graphState = states.current[activeGraphKey];
+  const baseLayout = baseLayouts[activeGraphKey];
+  const transform = transforms[activeGraphKey];
+  const nodeLookup = new Map(baseLayout.nodes.map((node) => [node.id, node]));
+  const stateLookup = new Map(graphState.map((node) => [node.id, node]));
+  const strength = terrainForces.strength ?? 1;
+  const damping = terrainForces.damping ?? 0.82;
+  const centerX = baseLayout.width * 0.5;
+  const centerY = baseLayout.height * 0.5;
+
+  for (const node of baseLayout.nodes) {
+    let dynamic = stateLookup.get(node.id);
+    if (!dynamic) {
+      dynamic = { id: node.id, x: node.x, y: node.y, vx: 0, vy: 0 };
+      graphState.push(dynamic);
+      stateLookup.set(node.id, dynamic);
+    }
+
+    const nodeCenterX = dynamic.x + node.width * 0.5;
+    const nodeCenterY = dynamic.y + node.height * 0.5;
+    const screenX = transform.x + nodeCenterX * transform.scale;
+    const screenY = transform.y + nodeCenterY * transform.scale;
+    const sample = terrainForces.sample(screenX / Math.max(1, viewportWidth), screenY / Math.max(1, viewportHeight), {
+      graphKey: activeGraphKey,
+      scale: transform.scale,
+      time,
+      viewportWidth,
+      viewportHeight,
+    });
+    const homeX = node.x - dynamic.x;
+    const homeY = node.y - dynamic.y;
+    const orbitX = nodeCenterX - centerX;
+    const orbitY = nodeCenterY - centerY;
+    const orbitLength = Math.max(1, Math.hypot(orbitX, orbitY));
+    const tangentX = -orbitY / orbitLength;
+    const tangentY = orbitX / orbitLength;
+    const envelope = Math.max(node.width, node.height) * (terrainForces.envelopeStrength ?? 0.02);
+    const forceX =
+      homeX * 3.4 +
+      sample.flowX * (42 + sample.strength * 80) * strength +
+      tangentX * sample.curvature * 36 * strength;
+    const forceY =
+      homeY * 3.4 +
+      sample.flowY * (42 + sample.strength * 80) * strength +
+      tangentY * sample.curvature * 36 * strength -
+      envelope;
+    dynamic.vx = (dynamic.vx + forceX * dt) * Math.pow(damping, dt * 60);
+    dynamic.vy = (dynamic.vy + forceY * dt) * Math.pow(damping, dt * 60);
+    dynamic.x += dynamic.vx * dt;
+    dynamic.y += dynamic.vy * dt;
+  }
+
+  const nextActiveLayout = layoutWithDynamicNodes(baseLayout, graphState, nodeLookup);
+  if (terrainForces.emitNodeEnvelopes && viewportElement) {
+    viewportElement.dispatchEvent(new CustomEvent<NodeEnvelope[]>("epiphanygraph-node-envelopes", {
+      bubbles: true,
+      detail: nextActiveLayout.nodes.map((node) => ({
+        id: node.id,
+        x: (transform.x + (node.x + node.width * 0.5) * transform.scale) / Math.max(1, viewportWidth),
+        y: (transform.y + (node.y + node.height * 0.5) * transform.scale) / Math.max(1, viewportHeight),
+        radius: Math.max(node.width, node.height) * transform.scale / Math.max(1, Math.min(viewportWidth, viewportHeight)),
+        strength: 0.34 + Math.min(1, (node.degree + node.linkCount) / 6) * 0.66,
+      })),
+    }));
+  }
+
+  return {
+    layouts: {
+      ...baseLayouts,
+      [activeGraphKey]: nextActiveLayout,
+    },
+  };
+}
+
+function layoutWithDynamicNodes(
+  layout: GraphLayout,
+  dynamicNodes: DynamicNodeState[],
+  nodeLookup: Map<string, PositionedNode>,
+): GraphLayout {
+  const dynamicLookup = new Map(dynamicNodes.map((node) => [node.id, node]));
+  const nodes = layout.nodes.map((node) => {
+    const dynamic = dynamicLookup.get(node.id);
+    return dynamic ? { ...node, x: dynamic.x, y: dynamic.y } : node;
+  });
+  const nextLookup = new Map(nodes.map((node) => [node.id, node]));
+  const edges = layout.edges.map((edge) => {
+    const source = nextLookup.get(edge.source_id) ?? nodeLookup.get(edge.source_id);
+    const target = nextLookup.get(edge.target_id) ?? nodeLookup.get(edge.target_id);
+    if (!source || !target) {
+      return edge;
+    }
+    const points = dynamicStraightEdgePoints(edge, nextLookup);
+    return {
+      ...edge,
+      points,
+      path: dynamicPointsToPath(points),
+      midpoint: dynamicEdgeMidpoint(points),
+    };
+  });
+  return { ...layout, nodes, edges };
+}
+
+function dynamicStraightEdgePoints(
+  edge: Pick<PositionedEdge, "source_id" | "target_id">,
+  nodes: Map<string, PositionedNode>,
+): PositionedPoint[] {
+  const source = nodes.get(edge.source_id);
+  const target = nodes.get(edge.target_id);
+  if (!source || !target) {
+    return [];
+  }
+  return [
+    {
+      x: source.x + source.width / 2,
+      y: source.y + source.height / 2,
+    },
+    {
+      x: target.x + target.width / 2,
+      y: target.y + target.height / 2,
+    },
+  ];
+}
+
+function dynamicPointsToPath(points: PositionedPoint[]) {
+  if (points.length === 0) {
+    return "";
+  }
+  const [first, ...rest] = points;
+  return `M ${formatPoint(first.x)} ${formatPoint(first.y)} ${rest
+    .map((point) => `L ${formatPoint(point.x)} ${formatPoint(point.y)}`)
+    .join(" ")}`;
+}
+
+function dynamicEdgeMidpoint(points: PositionedPoint[]) {
+  if (points.length === 0) {
+    return { x: 0, y: 0 };
+  }
+  return points[Math.floor(points.length / 2)];
+}
+
+function formatPoint(value: number) {
+  return Number.isFinite(value) ? value.toFixed(2) : "0";
 }
 
 function focusNodeInViewport(

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
 export type GraphKey = "architecture" | "dataflow";
 
@@ -81,7 +81,17 @@ export interface EpiphanyGraphViewerProps {
   layoutAlgorithms?: EpiphanyGraphLayoutAlgorithms;
   sidebar?: ReactNode;
   sidebarWidth?: CSSProperties["width"];
+  showSidebar?: boolean;
   overlayPanels?: boolean;
+  focusSelection?: boolean;
+  expandedNode?: {
+    graphKey: GraphKey;
+    nodeId: string;
+    content: ReactNode;
+    className?: string;
+    ariaLabel?: string;
+  };
+  onExpandedNodeClick?: MouseEventHandler<HTMLElement>;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: EpiphanyCodeRef,

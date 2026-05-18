@@ -44,7 +44,11 @@ export function EpiphanyGraphViewer({
   layoutAlgorithms,
   sidebar,
   sidebarWidth = 330,
+  showSidebar = true,
   overlayPanels = false,
+  focusSelection = false,
+  expandedNode,
+  onExpandedNodeClick,
   onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
@@ -219,6 +223,41 @@ export function EpiphanyGraphViewer({
   const linkedNodes = selectedNode
     ? findLinkedNodes(selectedNode.id, activeGraphKey, state)
     : [];
+  const expandedNodeMatches =
+    Boolean(expandedNode) &&
+    Boolean(selectedNode) &&
+    expandedNode?.graphKey === activeGraphKey &&
+    expandedNode.nodeId === selectedNode?.id;
+  const expandedNodeMetrics =
+    expandedNodeMatches && selectedNode && viewportSize.width > 0 && viewportSize.height > 0
+      ? expandedNodeViewportMetrics(selectedNode, activeTransform, viewportSize.width, viewportSize.height)
+      : null;
+
+  useEffect(() => {
+    if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+
+    const center = nodeCenter(selectedNode);
+    const targetScale = clamp(transforms[activeGraphKey].scale, 0.72, 1.08);
+    setTransforms((current) => ({
+      ...current,
+      [activeGraphKey]: {
+        x: viewportSize.width / 2 - center.x * targetScale,
+        y: viewportSize.height / 2 - center.y * targetScale,
+        scale: targetScale,
+        userMoved: true,
+      },
+    }));
+  }, [
+    activeGraphKey,
+    focusSelection,
+    selectedNode?.id,
+    selectedNode?.x,
+    selectedNode?.y,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   return (
     <section
@@ -490,6 +529,11 @@ export function EpiphanyGraphViewer({
                   const badgeRadius = Math.max(6, Math.min(12, node.width / 4, node.height / 3));
                   const badgeX = Math.max(badgeRadius + 4, Math.min(20, node.width / 2));
                   const badgeY = node.height < 40 ? node.height / 2 : 20;
+                  const statusText = node.status?.trim() ?? "";
+                  const showStatus = Boolean(statusText) && node.width >= 176 && node.height >= 72;
+                  const showLinkCount = node.linkCount > 0 && node.width >= 150 && node.height >= 86;
+                  const titleX = badgeX + badgeRadius + 14;
+                  const titleY = node.height < 76 ? node.height / 2 + 4 : 26;
                   return (
                     <g
                       key={node.id}
@@ -550,7 +594,7 @@ export function EpiphanyGraphViewer({
                           {node.badgeText}
                         </text>
 
-                        {node.status?.trim() && node.width >= 112 && node.height >= 48 && activeTransform.scale > 0.66 && (
+                        {showStatus && activeTransform.scale > 0.66 && (
                           <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
                           <rect
                             x={0}
@@ -571,17 +615,17 @@ export function EpiphanyGraphViewer({
                             fontWeight={700}
                             letterSpacing="0.06em"
                           >
-                            {node.status.toUpperCase()}
+                            {statusText.toUpperCase()}
                           </text>
                           </g>
                         )}
 
-                        {node.linkCount > 0 && node.width >= 72 && node.height >= 50 && (
-                          <g transform={`translate(${node.width - 30} ${node.height - 26})`}>
+                        {showLinkCount && (
+                          <g transform={`translate(${node.width - 27} ${node.height - 24})`}>
                           <circle
                             cx={0}
                             cy={0}
-                            r={13}
+                            r={10}
                             fill="rgba(5, 10, 22, 0.9)"
                             stroke="#f9a8d4"
                             strokeWidth={1.5}
@@ -589,10 +633,10 @@ export function EpiphanyGraphViewer({
                           />
                           <text
                             x={0}
-                            y={4}
+                            y={3.5}
                             textAnchor="middle"
                             fill="#fce7f3"
-                            fontSize={10}
+                            fontSize={8.5}
                             fontWeight={800}
                           >
                             {node.linkCount}
@@ -603,8 +647,8 @@ export function EpiphanyGraphViewer({
                         <g opacity={node.width >= 92 && node.height >= 40 ? fadeBetween(activeTransform.scale, 0.42, 0.72) : 0} pointerEvents="none">
                           {renderTextLines(
                             copyLayout.titleLines,
-                            44,
-                            26,
+                            titleX,
+                            titleY,
                             15,
                             {
                               fill: "#f8fbff",
@@ -656,10 +700,39 @@ export function EpiphanyGraphViewer({
               </g>
             </svg>
           )}
+          {expandedNodeMatches && expandedNodeMetrics && expandedNode && (
+            <div
+              key={`${expandedNode.graphKey}:${expandedNode.nodeId}`}
+              aria-label={expandedNode.ariaLabel}
+              className={expandedNode.className}
+              onClickCapture={onExpandedNodeClick}
+              data-graph-key={activeGraphKey}
+              data-node-id={selectedNode?.id}
+              style={{
+                position: "absolute",
+                left: expandedNodeMetrics.left,
+                top: expandedNodeMetrics.top,
+                width: expandedNodeMetrics.width,
+                height: expandedNodeMetrics.height,
+                zIndex: 4,
+                overflow: "auto",
+                borderRadius: 32,
+                background:
+                  "linear-gradient(145deg, rgba(7, 22, 32, 0.96), rgba(6, 11, 23, 0.94))",
+                border: "1px solid rgba(186, 230, 253, 0.72)",
+                boxShadow:
+                  "0 0 0 1px rgba(34, 211, 238, 0.16), 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 58px rgba(34, 211, 238, 0.24)",
+                pointerEvents: "auto",
+              }}
+            >
+              {expandedNode.content}
+            </div>
+          )}
         </div>
       </div>
 
-      <aside
+      {showSidebar && (
+        <aside
         className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
         style={{
           display: "grid",
@@ -805,7 +878,8 @@ export function EpiphanyGraphViewer({
             />
           )}
         </section>
-      </aside>
+        </aside>
+      )}
     </section>
   );
 }
@@ -1292,6 +1366,37 @@ function fitGraphToViewport(layout: GraphLayout, width: number, height: number):
   };
 }
 
+function nodeCenter(node: PositionedNode) {
+  return {
+    x: node.x + node.width / 2,
+    y: node.y + node.height / 2,
+  };
+}
+
+function expandedNodeViewportMetrics(
+  node: PositionedNode,
+  transform: ViewTransform,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  const center = nodeCenter(node);
+  const screenCenter = {
+    x: transform.x + center.x * transform.scale,
+    y: transform.y + center.y * transform.scale,
+  };
+  const width = Math.min(Math.max(viewportWidth * 0.72, 560), viewportWidth - 56);
+  const height = Math.min(Math.max(viewportHeight * 0.74, 420), viewportHeight - 136);
+  const left = clamp(screenCenter.x - width / 2, 24, Math.max(24, viewportWidth - width - 24));
+  const top = clamp(screenCenter.y - height / 2, 108, Math.max(108, viewportHeight - height - 24));
+
+  return {
+    left,
+    top,
+    width,
+    height,
+  };
+}
+
 function handleNativeWheel(
   event: WheelEvent,
   viewportElement: HTMLElement,
@@ -1452,15 +1557,20 @@ function fadeBetween(value: number, start: number, end: number) {
 }
 
 function buildNodeCopyLayout(node: PositionedNode) {
+  const compactHeight = node.height < 76;
+  const reservesStatusLane = node.status?.trim() && node.width >= 176 && node.height >= 72;
+  const reservesLinkLane = node.linkCount > 0 && node.width >= 150 && node.height >= 86;
+  const titleLeftInset = node.height < 40 ? 32 : 46;
+  const titleRightInset = reservesStatusLane ? 92 : reservesLinkLane ? 48 : 18;
   const titleWidth = Math.max(
-    108,
-    node.width - (node.status?.trim() ? 154 : 92),
+    28,
+    node.width - titleLeftInset - titleRightInset,
   );
-  const bodyWidth = Math.max(148, node.width - 34);
+  const bodyWidth = Math.max(80, node.width - 34);
   const titleLines = wrapTextToLines(
     node.title,
     estimateCharacterCapacity(titleWidth, 7.4),
-    2,
+    compactHeight ? 1 : 2,
   );
   const purposeLines = wrapTextToLines(
     node.purpose,

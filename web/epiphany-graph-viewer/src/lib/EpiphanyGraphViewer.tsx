@@ -39,6 +39,8 @@ export function EpiphanyGraphViewer({
   style,
   className,
   title = "Epiphany Graph Viewer",
+  graphLabels,
+  graphDescriptions,
   onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
@@ -179,6 +181,18 @@ export function EpiphanyGraphViewer({
     selection?.kind === "edge" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.edges.find((edge) => edge.resolvedId === selection.edgeId) ?? null
       : null;
+  const labels = {
+    architecture: graphLabels?.architecture ?? "Architecture",
+    dataflow: graphLabels?.dataflow ?? "Dataflow",
+  };
+  const descriptions = {
+    architecture:
+      graphDescriptions?.architecture ??
+      "Architecture nodes describe durable system parts: stores, renderers, promoters, bridges, and shells.",
+    dataflow:
+      graphDescriptions?.dataflow ??
+      "Dataflow nodes describe the movement of evidence and structure through the pipeline: observations, proposals, validation, fragments, turns.",
+  };
 
   const neighboringIds = new Set<string>();
   if (selectedNode && activeLayout) {
@@ -249,7 +263,7 @@ export function EpiphanyGraphViewer({
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <GraphTab
                 active={activeGraphKey === "architecture"}
-                label="Architecture"
+                label={labels.architecture}
                 count={state.architecture.nodes.length}
                 onClick={() =>
                   startTransition(() => {
@@ -262,7 +276,7 @@ export function EpiphanyGraphViewer({
               />
               <GraphTab
                 active={activeGraphKey === "dataflow"}
-                label="Dataflow"
+                label={labels.dataflow}
                 count={state.dataflow.nodes.length}
                 onClick={() =>
                   startTransition(() => {
@@ -336,7 +350,7 @@ export function EpiphanyGraphViewer({
             }}
           >
             <div style={{ fontWeight: 700, color: "#e5eef8" }}>
-              {activeGraphKey === "architecture" ? "Architecture graph" : "Dataflow graph"}
+              {labels[activeGraphKey]} graph
             </div>
             <div>Wheel to zoom. Drag the void to pan. Click something interesting and the side panel stops being decorative.</div>
           </div>
@@ -642,7 +656,7 @@ export function EpiphanyGraphViewer({
                 Live graph
               </div>
               <div style={{ fontSize: 21, fontWeight: 800, color: "#f7fbff" }}>
-                {activeGraphKey === "architecture" ? "Architecture" : "Dataflow"}
+                {labels[activeGraphKey]}
               </div>
             </div>
             <div
@@ -721,6 +735,7 @@ export function EpiphanyGraphViewer({
             <NodeDetails
               node={selectedNode}
               graphKey={activeGraphKey}
+              graphLabels={labels}
               linkedNodes={linkedNodes}
               links={state.links}
               onJump={(graphKey, nodeId) => {
@@ -734,10 +749,14 @@ export function EpiphanyGraphViewer({
           ) : selectedEdge ? (
             <EdgeDetails
               edge={selectedEdge}
+              graphLabels={labels}
               onCodeRefSelect={(codeRef) => onCodeRefSelect?.(codeRef, { graphKey: activeGraphKey, selection })}
             />
           ) : (
-            <EmptyDetails activeGraphKey={activeGraphKey} />
+            <EmptyDetails
+              activeGraphKey={activeGraphKey}
+              graphDescriptions={descriptions}
+            />
           )}
         </section>
       </aside>
@@ -866,6 +885,7 @@ function StageMessage({
 function NodeDetails({
   node,
   graphKey,
+  graphLabels,
   linkedNodes,
   links,
   onJump,
@@ -873,6 +893,7 @@ function NodeDetails({
 }: {
   node: PositionedNode;
   graphKey: GraphKey;
+  graphLabels: Record<GraphKey, string>;
   linkedNodes: Array<{
     graphKey: GraphKey;
     nodeId: string;
@@ -903,7 +924,7 @@ function NodeDetails({
         <div style={{ display: "grid", gap: 8 }}>
           <h2 style={{ margin: 0, fontSize: 24, lineHeight: 1.05 }}>{node.title}</h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <StatusChip label={graphKey} tone={graphKey === "architecture" ? "#67e8f9" : "#fb7185"} />
+            <StatusChip label={graphLabels[graphKey]} tone={graphKey === "architecture" ? "#67e8f9" : "#fb7185"} />
             {node.status?.trim() && <StatusChip label={node.status} tone={node.stroke} />}
             <StatusChip label={`${node.degree} degree`} tone="#c4b5fd" />
             <StatusChip label={`${crossLinkCount} links`} tone="#f9a8d4" />
@@ -950,7 +971,7 @@ function NodeDetails({
                 {linked.title}
               </strong>
               <span style={{ color: "rgba(252, 231, 243, 0.78)", fontSize: 13 }}>
-                {linked.graphKey} • {linked.nodeId}
+                {graphLabels[linked.graphKey]} • {linked.nodeId}
                 {linked.relationship ? ` • ${linked.relationship}` : ""}
               </span>
             </button>
@@ -965,9 +986,11 @@ function NodeDetails({
 
 function EdgeDetails({
   edge,
+  graphLabels,
   onCodeRefSelect,
 }: {
   edge: PositionedEdge;
+  graphLabels: Record<GraphKey, string>;
   onCodeRefSelect: (codeRef: EpiphanyCodeRef) => void;
 }) {
   return (
@@ -987,7 +1010,8 @@ function EdgeDetails({
           {edge.label?.trim() || edge.kind}
         </h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <StatusChip label={edge.kind} tone={edge.graphKey === "architecture" ? "#67e8f9" : "#fb7185"} />
+          <StatusChip label={graphLabels[edge.graphKey]} tone={edge.graphKey === "architecture" ? "#67e8f9" : "#fb7185"} />
+          <StatusChip label={edge.kind} tone="#c4b5fd" />
           {edge.id?.trim() && <StatusChip label={edge.id} tone="#c4b5fd" />}
         </div>
       </div>
@@ -1000,7 +1024,13 @@ function EdgeDetails({
   );
 }
 
-function EmptyDetails({ activeGraphKey }: { activeGraphKey: GraphKey }) {
+function EmptyDetails({
+  activeGraphKey,
+  graphDescriptions,
+}: {
+  activeGraphKey: GraphKey;
+  graphDescriptions: Record<GraphKey, string>;
+}) {
   return (
     <>
       <div style={{ display: "grid", gap: 8 }}>
@@ -1019,9 +1049,7 @@ function EmptyDetails({ activeGraphKey }: { activeGraphKey: GraphKey }) {
         </h2>
       </div>
       <DetailBlock title="What you are looking at">
-        {activeGraphKey === "architecture"
-          ? "Architecture nodes describe durable system parts: stores, renderers, promoters, bridges, and shells."
-          : "Dataflow nodes describe the movement of evidence and structure through the pipeline: observations, proposals, validation, fragments, turns."}
+        {graphDescriptions[activeGraphKey]}
       </DetailBlock>
       <DetailBlock title="Zoom policy">
         Titles appear first. Then purpose. Then mechanism and metaphor. The graph gets to be a map before it has to be a filing cabinet.

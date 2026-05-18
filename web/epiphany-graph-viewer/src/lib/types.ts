@@ -48,6 +48,9 @@ export interface EpiphanyGraphsState {
   links: EpiphanyGraphLink[];
 }
 
+export type EpiphanyGraphLabels = Partial<Record<GraphKey, string>>;
+export type EpiphanyGraphDescriptions = Partial<Record<GraphKey, string>>;
+
 export interface EpiphanyValidationIssue {
   scope: string;
   message: string;
@@ -72,6 +75,8 @@ export interface EpiphanyGraphViewerProps {
   style?: CSSProperties;
   className?: string;
   title?: string;
+  graphLabels?: EpiphanyGraphLabels;
+  graphDescriptions?: EpiphanyGraphDescriptions;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: EpiphanyCodeRef,

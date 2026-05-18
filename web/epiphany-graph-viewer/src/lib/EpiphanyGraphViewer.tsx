@@ -643,6 +643,8 @@ export function EpiphanyGraphViewer({
                 {activeLayout.nodes.map((node) => {
                   const isSelected = selectedNode?.id === node.id;
                   const isNeighbor = neighboringIds.has(node.id);
+                  const selectedNodeSurfaceOpacity =
+                    isSelected && expandedNodeMetrics ? expandedNodeMetrics.surfaceOpacity : 0;
                   const isExpandedSelectedNode = expandedNodeMatches && isSelected;
                   const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
                   const copyLayout = buildNodeCopyLayout(node);
@@ -659,7 +661,7 @@ export function EpiphanyGraphViewer({
                     <g
                       key={node.id}
                       transform={`translate(${node.x} ${node.y})`}
-                      opacity={isExpandedSelectedNode ? 0 : emphasis}
+                      opacity={isExpandedSelectedNode ? emphasis * (1 - selectedNodeSurfaceOpacity) : emphasis}
                       onClick={(event) => {
                         event.stopPropagation();
                         updateSelection({
@@ -861,6 +863,23 @@ export function EpiphanyGraphViewer({
               onPointerMove={(event) => handleExpandedNodePointerMove(event, expandedNodeScrollRef)}
               onPointerUp={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
               onPointerCancel={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
+              onDoubleClick={(event) => {
+                if (!selectedNode || isInteractiveArticleTarget(event.target)) {
+                  return;
+                }
+
+                event.stopPropagation();
+                if (viewportSize.width > 0 && viewportSize.height > 0) {
+                  focusNodeInViewport(
+                    selectedNode,
+                    activeGraphKey,
+                    "article",
+                    viewportSize.width,
+                    viewportSize.height,
+                    setTransforms,
+                  );
+                }
+              }}
               data-graph-key={activeGraphKey}
               data-node-id={selectedNode?.id}
               data-node-stage={expandedNodeMetrics.stage}
@@ -871,17 +890,58 @@ export function EpiphanyGraphViewer({
                 width: expandedNodeMetrics.width,
                 height: expandedNodeMetrics.height,
                 "--node-screen-area-ratio": expandedNodeMetrics.areaRatio,
+                "--node-focus-proximity": expandedNodeMetrics.focusProximity,
+                "--node-reveal": expandedNodeMetrics.reveal,
+                "--node-preview": expandedNodeMetrics.preview,
+                "--node-article": expandedNodeMetrics.article,
+                "--node-compact": 1 - expandedNodeMetrics.preview,
+                "--node-pad-y": `${0.62 + expandedNodeMetrics.article * 1.2}rem`,
+                "--node-pad-x": `${0.82 + expandedNodeMetrics.article * 1.4}rem`,
+                "--node-badge-size": `${3 + expandedNodeMetrics.preview * 0.85 + expandedNodeMetrics.article * 0.75}rem`,
+                "--node-title-size": `${1.08 + expandedNodeMetrics.preview * 0.75 + expandedNodeMetrics.article * 0.85}rem`,
+                "--node-title-max-height": `${1.12 + expandedNodeMetrics.preview * 1.45 + expandedNodeMetrics.article * 3.2}em`,
+                "--node-kicker-margin": `${0.12 + expandedNodeMetrics.preview * 0.35}rem`,
+                "--node-panel-gap": `${0.72 + expandedNodeMetrics.preview * 0.35}rem`,
+                "--node-header-margin": `${expandedNodeMetrics.preview}rem`,
+                "--node-preview-height": `${expandedNodeMetrics.preview * 12}rem`,
+                "--node-status-margin": `${expandedNodeMetrics.preview}rem`,
+                "--node-article-height": `${expandedNodeMetrics.article * 420}rem`,
+                "--node-note-list-height": `${expandedNodeMetrics.article * 80}rem`,
+                "--node-article-offset": `${(1 - expandedNodeMetrics.article) * 0.65}rem`,
+                "--node-badge-glow": `${1 + expandedNodeMetrics.preview * 1.4}rem`,
                 zIndex: 4,
                 overflow: "auto",
-                borderRadius: expandedNodeMetrics.stage === "summary" ? 999 : 32,
+                borderRadius: expandedNodeMetrics.borderRadius,
                 background:
                   "linear-gradient(145deg, rgba(7, 22, 32, 0.96), rgba(6, 11, 23, 0.94))",
                 border: "1px solid rgba(186, 230, 253, 0.72)",
                 boxShadow:
                   "0 0 0 1px rgba(34, 211, 238, 0.16), 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 58px rgba(34, 211, 238, 0.24)",
-                pointerEvents: "auto",
+                pointerEvents: expandedNodeMetrics.surfaceOpacity > 0.2 ? "auto" : "none",
                 cursor: "grab",
-              } as CSSProperties & { "--node-screen-area-ratio": number }}
+                opacity: expandedNodeMetrics.surfaceOpacity,
+              } as CSSProperties & {
+                "--node-screen-area-ratio": number;
+                "--node-focus-proximity": number;
+                "--node-reveal": number;
+                "--node-preview": number;
+                "--node-article": number;
+                "--node-compact": number;
+                "--node-pad-y": string;
+                "--node-pad-x": string;
+                "--node-badge-size": string;
+                "--node-title-size": string;
+                "--node-title-max-height": string;
+                "--node-kicker-margin": string;
+                "--node-panel-gap": string;
+                "--node-header-margin": string;
+                "--node-preview-height": string;
+                "--node-status-margin": string;
+                "--node-article-height": string;
+                "--node-note-list-height": string;
+                "--node-article-offset": string;
+                "--node-badge-glow": string;
+              }}
             >
               {expandedNode.content}
             </div>
@@ -1762,6 +1822,20 @@ function expandedNodeViewportMetrics(
   const width = node.width * transform.scale;
   const height = node.height * transform.scale;
   const areaRatio = (width * height) / Math.max(1, viewportWidth * viewportHeight);
+  const centerX = left + width / 2;
+  const centerY = top + height / 2;
+  const focusDistance = Math.hypot(centerX - viewportWidth / 2, centerY - viewportHeight / 2);
+  const focusRadius = Math.min(viewportWidth, viewportHeight);
+  const focusProximity = 1 - smoothstep(focusRadius * 0.16, focusRadius * 0.62, focusDistance);
+  const footprintReveal = smoothstep(0.018, 0.25, areaRatio);
+  const minimumReadableSpan = Math.min(width / Math.max(1, viewportWidth), height / Math.max(1, viewportHeight));
+  const spanReveal = smoothstep(0.12, 0.54, minimumReadableSpan);
+  const readableFootprint = clamp(footprintReveal * 0.58 + spanReveal * 0.42, 0, 1);
+  const reveal = readableFootprint * (0.55 + focusProximity * 0.45);
+  const preview = smoothstep(0.16, 0.58, reveal);
+  const article = smoothstep(0.58, 0.92, reveal);
+  const compactRadius = Math.min(999, Math.max(20, height / 2));
+  const borderRadius = lerp(compactRadius, 32, article);
 
   return {
     left,
@@ -1769,6 +1843,12 @@ function expandedNodeViewportMetrics(
     width,
     height,
     areaRatio,
+    focusProximity,
+    reveal,
+    preview,
+    article,
+    borderRadius,
+    surfaceOpacity: smoothstep(0.04, 0.2, reveal),
     stage: expandedNodeStage(width, height, areaRatio),
   };
 }
@@ -2102,6 +2182,18 @@ function fadeBetween(value: number, start: number, end: number) {
     return 1;
   }
   return (value - start) / (end - start);
+}
+
+function smoothstep(start: number, end: number, value: number) {
+  if (start === end) {
+    return value >= end ? 1 : 0;
+  }
+  const progress = clamp((value - start) / (end - start), 0, 1);
+  return progress * progress * (3 - 2 * progress);
+}
+
+function lerp(start: number, end: number, amount: number) {
+  return start + (end - start) * clamp(amount, 0, 1);
 }
 
 function buildNodeCopyLayout(node: PositionedNode) {

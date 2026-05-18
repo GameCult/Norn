@@ -91,10 +91,19 @@ export function EpiphanyGraphViewer({
   });
   const dragRef = useRef<{
     active: boolean;
+    pointerId: number;
     originX: number;
     originY: number;
     startX: number;
     startY: number;
+  } | null>(null);
+  const expandedNodeScrollRef = useRef<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    scrollLeft: number;
+    scrollTop: number;
   } | null>(null);
   const explicitFocusRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
@@ -472,6 +481,20 @@ export function EpiphanyGraphViewer({
 
         <div
           ref={viewportRef}
+          onPointerDownCapture={(event) => {
+            if (event.button !== 1) {
+              return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            handleViewportPointerDown(event, activeTransform, dragRef);
+          }}
+          onPointerMoveCapture={(event) =>
+            handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms)
+          }
+          onPointerUpCapture={(event) => handleViewportPointerUp(event, dragRef)}
+          onPointerCancelCapture={(event) => handleViewportPointerUp(event, dragRef)}
           style={{
             position: "relative",
             minHeight: overlayPanels ? "100vh" : 540,
@@ -528,8 +551,8 @@ export function EpiphanyGraphViewer({
               onPointerMove={(event) =>
                 handlePointerMove(event, activeGraphKey, dragRef, setTransforms)
               }
-              onPointerUp={() => handlePointerUp(dragRef)}
-              onPointerLeave={() => handlePointerUp(dragRef)}
+              onPointerUp={(event) => handlePointerUp(event, dragRef)}
+              onPointerLeave={(event) => handlePointerUp(event, dragRef)}
               onClick={(event) => {
                 if (event.target === event.currentTarget) {
                   updateSelection(null);
@@ -834,6 +857,10 @@ export function EpiphanyGraphViewer({
               aria-label={expandedNode.ariaLabel}
               className={expandedNode.className}
               onClickCapture={onExpandedNodeClick}
+              onPointerDown={(event) => handleExpandedNodePointerDown(event, expandedNodeScrollRef)}
+              onPointerMove={(event) => handleExpandedNodePointerMove(event, expandedNodeScrollRef)}
+              onPointerUp={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
+              onPointerCancel={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
               data-graph-key={activeGraphKey}
               data-node-id={selectedNode?.id}
               data-node-stage={expandedNodeMetrics.stage}
@@ -853,6 +880,7 @@ export function EpiphanyGraphViewer({
                 boxShadow:
                   "0 0 0 1px rgba(34, 211, 238, 0.16), 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 58px rgba(34, 211, 238, 0.24)",
                 pointerEvents: "auto",
+                cursor: "grab",
               } as CSSProperties & { "--node-screen-area-ratio": number }}
             >
               {expandedNode.content}
@@ -1793,6 +1821,7 @@ function handlePointerDown(
   transform: ViewTransform,
   dragRef: React.MutableRefObject<{
     active: boolean;
+    pointerId: number;
     originX: number;
     originY: number;
     startX: number;
@@ -1804,11 +1833,13 @@ function handlePointerDown(
   }
   dragRef.current = {
     active: true,
+    pointerId: event.pointerId,
     originX: event.clientX,
     originY: event.clientY,
     startX: transform.x,
     startY: transform.y,
   };
+  event.currentTarget.setPointerCapture(event.pointerId);
 }
 
 function handlePointerMove(
@@ -1816,6 +1847,7 @@ function handlePointerMove(
   graphKey: GraphKey,
   dragRef: React.MutableRefObject<{
     active: boolean;
+    pointerId: number;
     originX: number;
     originY: number;
     startX: number;
@@ -1824,6 +1856,9 @@ function handlePointerMove(
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
 ) {
   if (!dragRef.current?.active) {
+    return;
+  }
+  if (event.pointerId !== dragRef.current.pointerId) {
     return;
   }
   const deltaX = event.clientX - dragRef.current.originX;
@@ -1840,8 +1875,10 @@ function handlePointerMove(
 }
 
 function handlePointerUp(
+  event: ReactPointerEvent<SVGSVGElement>,
   dragRef: React.MutableRefObject<{
     active: boolean;
+    pointerId: number;
     originX: number;
     originY: number;
     startX: number;
@@ -1849,8 +1886,159 @@ function handlePointerUp(
   } | null>,
 ) {
   if (dragRef.current) {
+    if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
+      event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+    }
     dragRef.current.active = false;
   }
+}
+
+function handleViewportPointerDown(
+  event: ReactPointerEvent<HTMLElement>,
+  transform: ViewTransform,
+  dragRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    startX: number;
+    startY: number;
+  } | null>,
+) {
+  dragRef.current = {
+    active: true,
+    pointerId: event.pointerId,
+    originX: event.clientX,
+    originY: event.clientY,
+    startX: transform.x,
+    startY: transform.y,
+  };
+  event.currentTarget.setPointerCapture(event.pointerId);
+}
+
+function handleViewportPointerMove(
+  event: ReactPointerEvent<HTMLElement>,
+  graphKey: GraphKey,
+  dragRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    startX: number;
+    startY: number;
+  } | null>,
+  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+) {
+  if (!dragRef.current?.active || event.pointerId !== dragRef.current.pointerId) {
+    return;
+  }
+
+  const deltaX = event.clientX - dragRef.current.originX;
+  const deltaY = event.clientY - dragRef.current.originY;
+  setTransforms((existing) => ({
+    ...existing,
+    [graphKey]: {
+      ...existing[graphKey],
+      x: dragRef.current!.startX + deltaX,
+      y: dragRef.current!.startY + deltaY,
+      userMoved: true,
+    },
+  }));
+}
+
+function handleViewportPointerUp(
+  event: ReactPointerEvent<HTMLElement>,
+  dragRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    startX: number;
+    startY: number;
+  } | null>,
+) {
+  if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) {
+    return;
+  }
+
+  if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
+    event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+  }
+  dragRef.current.active = false;
+}
+
+function handleExpandedNodePointerDown(
+  event: ReactPointerEvent<HTMLElement>,
+  scrollRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>,
+) {
+  if (event.button !== 0 || isInteractiveArticleTarget(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
+  scrollRef.current = {
+    active: true,
+    pointerId: event.pointerId,
+    originX: event.clientX,
+    originY: event.clientY,
+    scrollLeft: event.currentTarget.scrollLeft,
+    scrollTop: event.currentTarget.scrollTop,
+  };
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.currentTarget.style.cursor = "grabbing";
+}
+
+function handleExpandedNodePointerMove(
+  event: ReactPointerEvent<HTMLElement>,
+  scrollRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>,
+) {
+  if (!scrollRef.current?.active || event.pointerId !== scrollRef.current.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.currentTarget.scrollLeft = scrollRef.current.scrollLeft - (event.clientX - scrollRef.current.originX);
+  event.currentTarget.scrollTop = scrollRef.current.scrollTop - (event.clientY - scrollRef.current.originY);
+}
+
+function handleExpandedNodePointerUp(
+  event: ReactPointerEvent<HTMLElement>,
+  scrollRef: React.MutableRefObject<{
+    active: boolean;
+    pointerId: number;
+    originX: number;
+    originY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>,
+) {
+  if (!scrollRef.current || event.pointerId !== scrollRef.current.pointerId) {
+    return;
+  }
+
+  if (event.currentTarget.hasPointerCapture(scrollRef.current.pointerId)) {
+    event.currentTarget.releasePointerCapture(scrollRef.current.pointerId);
+  }
+  event.currentTarget.style.cursor = "";
+  scrollRef.current.active = false;
+}
+
+function isInteractiveArticleTarget(target: EventTarget) {
+  return target instanceof Element && Boolean(target.closest("a, button, input, textarea, select, summary, [role='button']"));
 }
 
 function nudgeZoom(

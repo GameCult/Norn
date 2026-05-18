@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { layoutEpiphanyGraphs } from "./layout";
@@ -482,7 +483,7 @@ export function EpiphanyGraphViewer({
         <div
           ref={viewportRef}
           onPointerDownCapture={(event) => {
-            if (event.button !== 1) {
+            if (!isMiddlePointerEvent(event)) {
               return;
             }
 
@@ -495,6 +496,18 @@ export function EpiphanyGraphViewer({
           }
           onPointerUpCapture={(event) => handleViewportPointerUp(event, dragRef)}
           onPointerCancelCapture={(event) => handleViewportPointerUp(event, dragRef)}
+          onAuxClickCapture={(event) => {
+            if (isMiddleMouseEvent(event)) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }}
+          onClickCapture={(event) => {
+            if (isMiddleMouseEvent(event)) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }}
           style={{
             position: "relative",
             minHeight: overlayPanels ? "100vh" : 540,
@@ -1994,6 +2007,14 @@ function handleViewportPointerDown(
     startY: transform.y,
   };
   event.currentTarget.setPointerCapture(event.pointerId);
+}
+
+function isMiddlePointerEvent(event: ReactPointerEvent<HTMLElement>) {
+  return event.button === 1 || (event.buttons & 4) === 4;
+}
+
+function isMiddleMouseEvent(event: ReactMouseEvent<HTMLElement>) {
+  return event.button === 1 || (event.buttons & 4) === 4;
 }
 
 function handleViewportPointerMove(

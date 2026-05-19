@@ -11,7 +11,7 @@ was how we got the little public API landfill.
 - `graphs.links` show cross-graph correspondences instead of vanishing into a sidecar file
 - zoom reveals more node detail instead of trying to print the whole phone book at once
 - selection opens purpose, mechanism, metaphor, status, and code references in a detail pane
-- `layoutMode="combined-force"` gives clients the compact ELK shape plus live force motion
+- `layoutMode="combined-force"` gives clients the Rust hybrid solver shape plus live force motion
 
 ## Install
 
@@ -40,6 +40,20 @@ This writes:
 - `dist/index.cjs`
 - `dist/index.d.ts`
 - `dist/demo/`
+
+## Rust Solver WASM
+
+The viewer uses `epiphany-graph-rs` as its layout authority. The bundled WASM is
+checked into `src/lib/solver-wasm-bytes.ts` so the package builds without a separate
+asset pipeline.
+
+Regenerate it after changing `E:\Projects\epiphany-graph-rs`:
+
+```powershell
+npm run build:solver:wasm
+```
+
+ELK remains only as a fallback if the Rust solver fails to instantiate.
 
 ## Use In Another App
 
@@ -80,7 +94,7 @@ the warehouse inventory.
 
 - `layered`: stable default for hierarchy-heavy graphs
 - `stress`: compact overview shape for dense graphs
-- `force`: ELK force layout without browser-side motion
+- `force`: Rust hybrid solver with a looser organic force balance
 - `combined-force`: compact overview plus viewer-owned force motion
 
 `layoutMode` accepts one mode for both graphs or per-graph modes:

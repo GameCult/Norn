@@ -1,4 +1,5 @@
 import ELK from "elkjs/lib/elk.bundled.js";
+import { layoutWithRustSolver } from "./solver-wasm";
 import type {
   EpiphanyGraph,
   EpiphanyGraphEdge,
@@ -60,6 +61,22 @@ export async function layoutEpiphanyGraphs(
 }
 
 async function layoutGraph(
+  graphKey: GraphKey,
+  graph: EpiphanyGraph,
+  links: EpiphanyGraphLink[],
+  mode: EpiphanyGraphLayoutMode = "layered",
+  viewport?: LayoutViewport,
+): Promise<GraphLayout> {
+  try {
+    return await layoutGraphWithRustSolver(graphKey, graph, links, mode, viewport);
+  } catch (error) {
+    console.warn("Epiphany Rust graph solver failed; falling back to ELK.", error);
+  }
+
+  return layoutGraphWithElk(graphKey, graph, links, mode, viewport);
+}
+
+async function layoutGraphWithElk(
   graphKey: GraphKey,
   graph: EpiphanyGraph,
   links: EpiphanyGraphLink[],
@@ -148,6 +165,91 @@ async function layoutGraph(
   };
 }
 
+async function layoutGraphWithRustSolver(
+  graphKey: GraphKey,
+  graph: EpiphanyGraph,
+  links: EpiphanyGraphLink[],
+  mode: EpiphanyGraphLayoutMode,
+  viewport?: LayoutViewport,
+): Promise<GraphLayout> {
+  const sizingAlgorithm = sizingAlgorithmForMode(mode);
+  const nodeDegrees = buildNodeDegrees(graph);
+  const linkCounts = buildLinkCounts(graphKey, links);
+  const nodeIndex = new Map(graph.nodes.map((node, index) => [node.id, index]));
+  const sizes = graph.nodes.map((node) =>
+    estimateNodeSize(node, graphKey, sizingAlgorithm, graph.nodes.length, viewport)
+  );
+  const edgePairs: number[] = [];
+  for (const edge of graph.edges) {
+    const source = nodeIndex.get(edge.source_id);
+    const target = nodeIndex.get(edge.target_id);
+    if (source == null || target == null) {
+      continue;
+    }
+    edgePairs.push(source, target);
+  }
+
+  const coordinates = await layoutWithRustSolver({
+    nodeWeights: new Float32Array(
+      graph.nodes.map((node, index) => {
+        const degree = nodeDegrees.get(node.id) ?? 0;
+        const linkCount = linkCounts.get(node.id) ?? 0;
+        return Math.max(0.25, 1 + degree * 0.16 + linkCount * 0.24 + (sizes[index].width * sizes[index].height) / 80_000);
+      }),
+    ),
+    edgePairs: new Uint32Array(edgePairs),
+    ...rustSolverConfigFor(graphKey, mode),
+  });
+
+  const positionedNodes: PositionedNode[] = graph.nodes.map((node, index) => {
+    const size = sizes[index];
+    const degree = nodeDegrees.get(node.id) ?? 0;
+    const linkCount = linkCounts.get(node.id) ?? 0;
+    const offset = index * 4;
+    return {
+      ...node,
+      code_refs: node.code_refs ?? [],
+      graphKey,
+      x: coordinates[offset] - size.width / 2,
+      y: coordinates[offset + 1] - size.height / 2,
+      width: size.width,
+      height: size.height,
+      degree,
+      linkCount,
+      badgeText: nodeBadgeText(node.title),
+      fill: nodeFill(graphKey, node.status),
+      stroke: nodeStroke(graphKey, node.status),
+    };
+  });
+  const separatedNodes = normalizeNodeBounds(resizeNodesForSeparation(positionedNodes, sizingAlgorithm));
+  const nodeLookup = new Map(separatedNodes.map((node) => [node.id, node]));
+  const positionedEdges: PositionedEdge[] = graph.edges.map((source, index) => {
+    const resolvedId = resolveEdgeId(source, index);
+    const fallbackPoints = straightEdgePoints(source, nodeLookup);
+    return {
+      ...source,
+      id: source.id ?? null,
+      label: source.label ?? null,
+      mechanism: source.mechanism ?? null,
+      code_refs: source.code_refs ?? [],
+      graphKey,
+      resolvedId,
+      points: fallbackPoints,
+      path: pointsToPath(fallbackPoints),
+      midpoint: edgeMidpoint(fallbackPoints),
+    };
+  });
+
+  const bounds = layoutBounds(separatedNodes);
+  return {
+    graphKey,
+    width: Math.max(720, bounds.width),
+    height: Math.max(520, bounds.height),
+    nodes: separatedNodes,
+    edges: positionedEdges,
+  };
+}
+
 function layoutModeFor(
   graphKey: GraphKey,
   mode: EpiphanyGraphLayoutModeConfig,
@@ -169,6 +271,37 @@ function elkAlgorithmForMode(mode: EpiphanyGraphLayoutMode) {
   }
 
   return "org.eclipse.elk.layered";
+}
+
+function sizingAlgorithmForMode(mode: EpiphanyGraphLayoutMode) {
+  return mode === "layered" ? "org.eclipse.elk.layered" : "org.eclipse.elk.stress";
+}
+
+function rustSolverConfigFor(graphKey: GraphKey, mode: EpiphanyGraphLayoutMode) {
+  if (mode === "layered") {
+    return {
+      iterations: graphKey === "architecture" ? 320 : 300,
+      rankGap: graphKey === "architecture" ? 170 : 150,
+      nodeGap: graphKey === "architecture" ? 96 : 112,
+      edgeLength: graphKey === "architecture" ? 150 : 180,
+    };
+  }
+
+  if (mode === "force") {
+    return {
+      iterations: graphKey === "architecture" ? 520 : 420,
+      rankGap: graphKey === "architecture" ? 130 : 120,
+      nodeGap: graphKey === "architecture" ? 92 : 112,
+      edgeLength: graphKey === "architecture" ? 190 : 230,
+    };
+  }
+
+  return {
+    iterations: graphKey === "architecture" ? 380 : 320,
+    rankGap: graphKey === "architecture" ? 145 : 132,
+    nodeGap: graphKey === "architecture" ? 92 : 116,
+    edgeLength: graphKey === "architecture" ? 180 : 220,
+  };
 }
 
 function normalizeNodeBounds(nodes: PositionedNode[]): PositionedNode[] {

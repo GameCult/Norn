@@ -38,7 +38,7 @@ export function GraphScreen({ state }: { state: EpiphanyGraphsState }) {
 The public viewer API is intentionally coarse:
 
 - `layoutMode`: `layered`, `stress`, `force`, or `combined-force`
-- `motion`: viewer-owned force tuning for combined-force layouts
+- `motion`: viewer-owned force tuning for Rust-solver combined-force layouts
 - `performance`: `quality`, `balanced`, `fast`, or explicit `simulationBudgetMs` realtime knobs
 - `selection`, `focusSelection`, `expandedNode`, and callbacks for app integration
 - typed state and event payloads
@@ -227,7 +227,7 @@ It consumes the typed Epiphany graph state shape directly:
 
 and packages:
 
-- viewer-owned layout modes
+- Rust hybrid solver layout through bundled WASM
 - zoom and pan
 - zoom-gated label and detail pop-in
 - node, edge, and code-ref inspection

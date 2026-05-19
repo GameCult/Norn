@@ -1,8 +1,49 @@
 # EpiphanyGraph
 
-Small .NET tool for turning an Obsidian note subtree into an MSAGL layout. It still works as a CLI, and now it can also sit on stdio as an MCP server.
+React-first graph viewer for Epiphany typed graph state.
+
+The live package is `web/epiphany-graph-viewer`. It is what clients and agents
+should reach for when they want to render `architecture`, `dataflow`, and typed
+cross-links in a UI.
+
+The older .NET generator, MSAGL SVG renderer, MCP server, and ELK probe still exist
+as support tools for note exports and layout experiments. They are not competing
+client surfaces. Do not make consumers choose between engines like this repo is a
+sad little trade show booth.
+
+## React Viewer
+
+```powershell
+cd E:\Projects\EpiphanyGraph\web\epiphany-graph-viewer
+npm install
+npm run dev
+```
+
+```tsx
+import { EpiphanyGraphViewer } from "@epiphanygraph/epiphany-graph-viewer";
+import type { EpiphanyGraphsState } from "@epiphanygraph/epiphany-graph-viewer";
+
+export function GraphScreen({ state }: { state: EpiphanyGraphsState }) {
+  return (
+    <EpiphanyGraphViewer
+      state={state}
+      layoutMode="combined-force"
+      motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
+    />
+  );
+}
+```
+
+The public viewer API is intentionally coarse:
+
+- `layoutMode`: `layered`, `stress`, `force`, or `combined-force`
+- `motion`: viewer-owned force tuning for combined-force layouts
+- `selection`, `focusSelection`, `expandedNode`, and callbacks for app integration
+- typed state and event payloads
 
 ## What It Does
+
+The support generator:
 
 - scans markdown notes under a vault folder
 - resolves Obsidian wikilinks and regular markdown note links
@@ -172,9 +213,9 @@ That keeps structurally separated note graphs from vanishing just because they n
 
 There is also a small web-side `elkjs` probe under `web/elk-probe/`. It inspects which algorithms and options are actually present in the installed `elkjs` build and can relayout existing `source-tree.json` / `control-flow.json` outputs without crossing the C# boundary.
 
-## Epiphany Graph Viewer
+## Support Tool: Epiphany Graph Viewer Demo
 
-There is now also a real web-side viewer package under `web/epiphany-graph-viewer/`.
+The web-side viewer package lives under `web/epiphany-graph-viewer/`.
 
 It consumes the typed Epiphany graph state shape directly:
 
@@ -184,11 +225,12 @@ It consumes the typed Epiphany graph state shape directly:
 
 and packages:
 
-- `elkjs` layout
+- viewer-owned layout modes
 - zoom and pan
 - zoom-gated label and detail pop-in
 - node, edge, and code-ref inspection
 - typed cross-link browsing between architecture and dataflow
+- combined-force motion tuning for clients that want the lively overview
 
 Run it locally with:
 

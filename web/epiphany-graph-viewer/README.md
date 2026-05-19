@@ -1,13 +1,17 @@
 # Epiphany Graph Viewer
 
-Small React component package for browsing Epiphany's durable typed graph state with `elkjs`.
+React component package for browsing Epiphany's durable typed graph state.
 
-This is the part where the graphs stop being dead export artifacts and start acting like UI:
+This package is the live client surface. The viewer owns layout, motion, selection,
+inspection, and rendering policy; consuming apps provide typed graph state and coarse
+viewer intent. Nobody needs to learn which engine coughed up which coordinates. That
+was how we got the little public API landfill.
 
 - `graphs.architecture` and `graphs.dataflow` render as first-class views
 - `graphs.links` show cross-graph correspondences instead of vanishing into a sidecar file
 - zoom reveals more node detail instead of trying to print the whole phone book at once
 - selection opens purpose, mechanism, metaphor, status, and code references in a detail pane
+- `layoutMode="combined-force"` gives clients the compact ELK shape plus live force motion
 
 ## Install
 
@@ -50,16 +54,63 @@ const state: EpiphanyGraphsState = {
 };
 
 export function Screen() {
-  return <EpiphanyGraphViewer state={state} />;
+  return (
+    <EpiphanyGraphViewer
+      state={state}
+      layoutMode="combined-force"
+      motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
+    />
+  );
 }
 ```
 
-## Current Shape
+## Public API
 
-- the viewer lays out each graph with `elkjs` on the client
-- `architecture` defaults to layered layout
-- `dataflow` defaults to a rightward layered layout with wider stage spacing
-- links are exposed in the detail pane and through node badges
-- zoom gates title, purpose, and metadata visibility
+The package exports:
 
-This is a prototype seam for EpiphanyAgent, not a final cathedral. The point is to package the behavior, the contract, and the rendering policy in one place so the upcoming GUI can steal it without ceremony.
+- `EpiphanyGraphViewer`
+- state, selection, node, edge, layout mode, motion, and event payload types
+
+The package does not export demo data, validation helpers, ELK probes, SVG renderers,
+or engine controls. Those are implementation furniture. Consumers get the couch, not
+the warehouse inventory.
+
+## Layout Modes
+
+- `layered`: stable default for hierarchy-heavy graphs
+- `stress`: compact overview shape for dense graphs
+- `force`: ELK force layout without browser-side motion
+- `combined-force`: compact overview plus viewer-owned force motion
+
+`layoutMode` accepts one mode for both graphs or per-graph modes:
+
+```tsx
+<EpiphanyGraphViewer
+  state={state}
+  layoutMode={{ architecture: "layered", dataflow: "combined-force" }}
+/>
+```
+
+## Motion
+
+`combined-force` enables motion automatically. Pass `motion={false}` to freeze it, or
+tune the viewer-owned model:
+
+```tsx
+<EpiphanyGraphViewer
+  state={state}
+  layoutMode="combined-force"
+  motion={{
+    strength: 1.1,
+    damping: 0.84,
+    flow: 1.15,
+    orbit: 0.8,
+    lift: 0.9,
+    pulse: 1,
+    emitNodeEnvelopes: true,
+  }}
+/>
+```
+
+`emitNodeEnvelopes` dispatches `epiphanygraph-node-envelopes` from the viewport for
+backdrops that want node-aware effects without owning graph physics.

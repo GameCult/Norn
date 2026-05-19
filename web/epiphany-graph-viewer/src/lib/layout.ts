@@ -4,7 +4,8 @@ import type {
   EpiphanyGraphEdge,
   EpiphanyGraphLink,
   EpiphanyGraphsState,
-  EpiphanyGraphLayoutAlgorithms,
+  EpiphanyGraphLayoutMode,
+  EpiphanyGraphLayoutModeConfig,
   GraphKey,
   GraphLayout,
   PositionedEdge,
@@ -47,12 +48,12 @@ type LayoutViewport = {
 
 export async function layoutEpiphanyGraphs(
   state: EpiphanyGraphsState,
-  algorithms: EpiphanyGraphLayoutAlgorithms = {},
+  mode: EpiphanyGraphLayoutModeConfig = "layered",
   viewport?: LayoutViewport,
 ): Promise<Record<GraphKey, GraphLayout>> {
   const [architecture, dataflow] = await Promise.all([
-    layoutGraph("architecture", state.architecture, state.links, algorithms.architecture, viewport),
-    layoutGraph("dataflow", state.dataflow, state.links, algorithms.dataflow, viewport),
+    layoutGraph("architecture", state.architecture, state.links, layoutModeFor("architecture", mode), viewport),
+    layoutGraph("dataflow", state.dataflow, state.links, layoutModeFor("dataflow", mode), viewport),
   ]);
 
   return { architecture, dataflow };
@@ -62,9 +63,10 @@ async function layoutGraph(
   graphKey: GraphKey,
   graph: EpiphanyGraph,
   links: EpiphanyGraphLink[],
-  algorithm = "org.eclipse.elk.layered",
+  mode: EpiphanyGraphLayoutMode = "layered",
   viewport?: LayoutViewport,
 ): Promise<GraphLayout> {
+  const algorithm = elkAlgorithmForMode(mode);
   const nodeDegrees = buildNodeDegrees(graph);
   const linkCounts = buildLinkCounts(graphKey, links);
   const nodes = graph.nodes.map((node) => {
@@ -144,6 +146,29 @@ async function layoutGraph(
     nodes: separatedNodes,
     edges: positionedEdges,
   };
+}
+
+function layoutModeFor(
+  graphKey: GraphKey,
+  mode: EpiphanyGraphLayoutModeConfig,
+): EpiphanyGraphLayoutMode {
+  if (typeof mode === "string") {
+    return mode;
+  }
+
+  return mode[graphKey] ?? "layered";
+}
+
+function elkAlgorithmForMode(mode: EpiphanyGraphLayoutMode) {
+  if (mode === "stress" || mode === "combined-force") {
+    return "org.eclipse.elk.stress";
+  }
+
+  if (mode === "force") {
+    return "org.eclipse.elk.force";
+  }
+
+  return "org.eclipse.elk.layered";
 }
 
 function normalizeNodeBounds(nodes: PositionedNode[]): PositionedNode[] {

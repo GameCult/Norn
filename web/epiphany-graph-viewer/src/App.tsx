@@ -66,7 +66,11 @@ export function App() {
         </div>
       </section>
       <section style={{ padding: "0 20px 20px" }}>
-        <EpiphanyGraphViewer state={mockEpiphanyGraphState} />
+        <EpiphanyGraphViewer
+          state={mockEpiphanyGraphState}
+          layoutMode="combined-force"
+          motion={{ strength: 1.08, flow: 1.1, orbit: 0.82, lift: 0.9 }}
+        />
       </section>
     </main>
   );

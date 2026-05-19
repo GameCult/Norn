@@ -13,6 +13,8 @@ import { layoutEpiphanyGraphs } from "./layout";
 import type {
   EpiphanyCodeRef,
   EpiphanyGraphLink,
+  EpiphanyGraphLayoutModeConfig,
+  EpiphanyGraphMotionOptions,
   EpiphanyGraphViewerProps,
   EpiphanyValidationIssue,
   GraphKey,
@@ -21,7 +23,6 @@ import type {
   PositionedEdge,
   PositionedNode,
   PositionedPoint,
-  TerrainForceOptions,
   ViewerSelection,
   ViewportTransformEnvelope,
 } from "./types";
@@ -56,14 +57,14 @@ export function EpiphanyGraphViewer({
   title = "Epiphany Graph Viewer",
   graphLabels,
   graphDescriptions,
-  layoutAlgorithms,
+  layoutMode = "layered",
+  motion,
   sidebar,
   sidebarWidth = 330,
   showSidebar = true,
   overlayPanels = false,
   viewportBackdrop,
   viewportBackground,
-  terrainForces,
   focusSelection = false,
   selectionFocusMode = "preview",
   expandedNode,
@@ -110,7 +111,9 @@ export function EpiphanyGraphViewer({
   } | null>(null);
   const explicitFocusRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
-  const layoutAlgorithmKey = `${layoutAlgorithms?.architecture ?? ""}|${layoutAlgorithms?.dataflow ?? ""}`;
+  const layoutModeKey = layoutModeCacheKey(layoutMode);
+  const motionOptions = resolveMotionOptions(layoutMode, motion);
+  const motionKey = motionOptions ? motionOptionsCacheKey(motionOptions) : "off";
   const updateSelection = (nextSelection: ViewerSelection | null) => {
     if (controlledSelection === undefined) {
       setLocalSelection(nextSelection);
@@ -133,7 +136,7 @@ export function EpiphanyGraphViewer({
 
     layoutEpiphanyGraphs(
       state,
-      layoutAlgorithms,
+      layoutMode,
       viewportSize.width > 0 && viewportSize.height > 0 ? viewportSize : undefined,
     )
       .then((nextLayouts) => {
@@ -159,10 +162,10 @@ export function EpiphanyGraphViewer({
     return () => {
       cancelled = true;
     };
-  }, [layoutAlgorithmKey, state, viewportSize.height, viewportSize.width]);
+  }, [layoutModeKey, state, viewportSize.height, viewportSize.width]);
 
   useEffect(() => {
-    if (!terrainForces || !layouts || viewportSize.width <= 0 || viewportSize.height <= 0) {
+    if (!motionOptions || !layouts || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
 
@@ -176,7 +179,7 @@ export function EpiphanyGraphViewer({
         states: dynamicStateRef,
         activeGraphKey,
         transforms,
-        terrainForces,
+        motionOptions,
         viewportElement: viewportRef.current,
         viewportWidth: viewportSize.width,
         viewportHeight: viewportSize.height,
@@ -193,7 +196,7 @@ export function EpiphanyGraphViewer({
   }, [
     activeGraphKey,
     layouts,
-    terrainForces,
+    motionKey,
     transforms,
     viewportSize.height,
     viewportSize.width,
@@ -1417,6 +1420,84 @@ function nodeCenter(node: PositionedNode) {
   };
 }
 
+function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {
+  if (typeof mode === "string") {
+    return mode;
+  }
+
+  return `${mode.architecture ?? "layered"}|${mode.dataflow ?? "layered"}`;
+}
+
+function resolveMotionOptions(
+  layoutMode: EpiphanyGraphLayoutModeConfig,
+  motion: EpiphanyGraphMotionOptions | boolean | undefined,
+): EpiphanyGraphMotionOptions | null {
+  if (motion === false) {
+    return null;
+  }
+
+  const combinedForce =
+    typeof layoutMode === "string"
+      ? layoutMode === "combined-force"
+      : layoutMode.architecture === "combined-force" || layoutMode.dataflow === "combined-force";
+
+  if (motion === undefined && !combinedForce) {
+    return null;
+  }
+
+  if (motion === true || motion === undefined) {
+    return {};
+  }
+
+  return motion.enabled === false ? null : motion;
+}
+
+function motionOptionsCacheKey(options: EpiphanyGraphMotionOptions) {
+  return [
+    options.strength ?? "",
+    options.damping ?? "",
+    options.flow ?? "",
+    options.orbit ?? "",
+    options.lift ?? "",
+    options.pulse ?? "",
+    options.emitNodeEnvelopes ? "emit" : "",
+  ].join("|");
+}
+
+function sampleCombinedForce(
+  x: number,
+  y: number,
+  context: {
+    graphKey: GraphKey;
+    scale: number;
+    time: number;
+    bounds: ViewportTransformEnvelope["bounds"];
+  },
+  pulse: number,
+) {
+  const graphBias = context.graphKey === "architecture" ? 0.74 : 1.18;
+  const normalizedX = x - 0.5;
+  const normalizedY = y - 0.5;
+  const distance = Math.max(0.001, Math.hypot(normalizedX, normalizedY));
+  const spin = context.time * (0.32 + graphBias * 0.12) * pulse;
+  const wave =
+    Math.sin((x * 4.8 + y * 2.6 + spin) * Math.PI) * 0.52 +
+    Math.cos((y * 5.2 - x * 1.8 - spin * 0.7) * Math.PI) * 0.48;
+  const swirlX = -normalizedY / distance;
+  const swirlY = normalizedX / distance;
+  const driftX = Math.cos(wave + graphBias) * 0.34 + swirlX * 0.66;
+  const driftY = Math.sin(wave - graphBias) * 0.34 + swirlY * 0.66;
+  const scaleAttenuation = clamp(1.12 - context.scale * 0.08, 0.42, 1);
+  const graphSpan = Math.max(1, Math.hypot(context.bounds.width, context.bounds.height));
+
+  return {
+    flowX: driftX * scaleAttenuation,
+    flowY: driftY * scaleAttenuation,
+    strength: clamp(0.42 + Math.abs(wave) * 0.38 + graphSpan / 8000, 0.24, 1),
+    curvature: clamp((0.5 - distance) * 1.7 + wave * 0.26, -1, 1),
+  };
+}
+
 function dynamicNodesFromLayout(layout: GraphLayout): DynamicNodeState[] {
   return layout.nodes.map((node) => ({
     id: node.id,
@@ -1451,7 +1532,7 @@ function stepDynamicLayouts({
   states,
   activeGraphKey,
   transforms,
-  terrainForces,
+  motionOptions,
   viewportElement,
   viewportWidth,
   viewportHeight,
@@ -1462,7 +1543,7 @@ function stepDynamicLayouts({
   states: React.MutableRefObject<Record<GraphKey, DynamicNodeState[]> | null>;
   activeGraphKey: GraphKey;
   transforms: Record<GraphKey, ViewTransform>;
-  terrainForces: TerrainForceOptions;
+  motionOptions: EpiphanyGraphMotionOptions;
   viewportElement: HTMLElement | null;
   viewportWidth: number;
   viewportHeight: number;
@@ -1481,8 +1562,12 @@ function stepDynamicLayouts({
   const transform = transforms[activeGraphKey];
   const nodeLookup = new Map(baseLayout.nodes.map((node) => [node.id, node]));
   const stateLookup = new Map(graphState.map((node) => [node.id, node]));
-  const strength = terrainForces.strength ?? 1;
-  const damping = terrainForces.damping ?? 0.82;
+  const strength = motionOptions.strength ?? 1;
+  const damping = motionOptions.damping ?? 0.82;
+  const flow = motionOptions.flow ?? 1;
+  const orbit = motionOptions.orbit ?? 1;
+  const lift = motionOptions.lift ?? 1;
+  const pulse = motionOptions.pulse ?? 1;
   const bounds = nodeAabb(baseLayout.nodes);
   const centerX = baseLayout.width * 0.5;
   const centerY = baseLayout.height * 0.5;
@@ -1499,16 +1584,12 @@ function stepDynamicLayouts({
     const nodeCenterY = dynamic.y + node.height * 0.5;
     const screenX = transform.x + nodeCenterX * transform.scale;
     const screenY = transform.y + nodeCenterY * transform.scale;
-    const sample = terrainForces.sample(screenX / Math.max(1, viewportWidth), screenY / Math.max(1, viewportHeight), {
+    const sample = sampleCombinedForce(screenX / Math.max(1, viewportWidth), screenY / Math.max(1, viewportHeight), {
       graphKey: activeGraphKey,
       scale: transform.scale,
-      viewX: transform.x,
-      viewY: transform.y,
       time,
-      viewportWidth,
-      viewportHeight,
       bounds,
-    });
+    }, pulse);
     const homeX = node.x - dynamic.x;
     const homeY = node.y - dynamic.y;
     const orbitX = nodeCenterX - centerX;
@@ -1516,15 +1597,15 @@ function stepDynamicLayouts({
     const orbitLength = Math.max(1, Math.hypot(orbitX, orbitY));
     const tangentX = -orbitY / orbitLength;
     const tangentY = orbitX / orbitLength;
-    const envelope = Math.max(node.width, node.height) * (terrainForces.envelopeStrength ?? 0.02);
+    const envelope = Math.max(node.width, node.height) * 0.02 * lift;
     const forceX =
       homeX * 3.4 +
-      sample.flowX * (42 + sample.strength * 80) * strength +
-      tangentX * sample.curvature * 36 * strength;
+      sample.flowX * (42 + sample.strength * 80) * strength * flow +
+      tangentX * sample.curvature * 36 * strength * orbit;
     const forceY =
       homeY * 3.4 +
-      sample.flowY * (42 + sample.strength * 80) * strength +
-      tangentY * sample.curvature * 36 * strength -
+      sample.flowY * (42 + sample.strength * 80) * strength * flow +
+      tangentY * sample.curvature * 36 * strength * orbit -
       envelope;
     dynamic.vx = (dynamic.vx + forceX * dt) * Math.pow(damping, dt * 60);
     dynamic.vy = (dynamic.vy + forceY * dt) * Math.pow(damping, dt * 60);
@@ -1533,7 +1614,7 @@ function stepDynamicLayouts({
   }
 
   const nextActiveLayout = layoutWithDynamicNodes(baseLayout, graphState, nodeLookup);
-  if (terrainForces.emitNodeEnvelopes && viewportElement) {
+  if (motionOptions.emitNodeEnvelopes && viewportElement) {
     viewportElement.dispatchEvent(new CustomEvent<NodeEnvelope[]>("epiphanygraph-node-envelopes", {
       bubbles: true,
       detail: nextActiveLayout.nodes.map((node) => ({

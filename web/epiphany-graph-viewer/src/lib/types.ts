@@ -50,7 +50,21 @@ export interface EpiphanyGraphsState {
 
 export type EpiphanyGraphLabels = Partial<Record<GraphKey, string>>;
 export type EpiphanyGraphDescriptions = Partial<Record<GraphKey, string>>;
-export type EpiphanyGraphLayoutAlgorithms = Partial<Record<GraphKey, string>>;
+export type EpiphanyGraphLayoutMode = "layered" | "stress" | "force" | "combined-force";
+export type EpiphanyGraphLayoutModeConfig =
+  | EpiphanyGraphLayoutMode
+  | Partial<Record<GraphKey, EpiphanyGraphLayoutMode>>;
+
+export interface EpiphanyGraphMotionOptions {
+  enabled?: boolean;
+  strength?: number;
+  damping?: number;
+  flow?: number;
+  orbit?: number;
+  lift?: number;
+  pulse?: number;
+  emitNodeEnvelopes?: boolean;
+}
 
 export interface EpiphanyValidationIssue {
   scope: string;
@@ -68,13 +82,6 @@ export type ViewerSelection =
       graphKey: GraphKey;
       edgeId: string;
     };
-
-export type TerrainForceSample = {
-  flowX: number;
-  flowY: number;
-  strength: number;
-  curvature: number;
-};
 
 export type NodeEnvelope = {
   id: string;
@@ -99,25 +106,6 @@ export type ViewportTransformEnvelope = {
   };
 };
 
-export type TerrainForceContext = {
-  graphKey: GraphKey;
-  scale: number;
-  viewX: number;
-  viewY: number;
-  time: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  bounds: ViewportTransformEnvelope["bounds"];
-};
-
-export type TerrainForceOptions = {
-  sample: (x: number, y: number, context: TerrainForceContext) => TerrainForceSample;
-  strength?: number;
-  damping?: number;
-  envelopeStrength?: number;
-  emitNodeEnvelopes?: boolean;
-};
-
 export interface EpiphanyGraphViewerProps {
   state: EpiphanyGraphsState;
   initialGraph?: GraphKey;
@@ -127,14 +115,14 @@ export interface EpiphanyGraphViewerProps {
   title?: string;
   graphLabels?: EpiphanyGraphLabels;
   graphDescriptions?: EpiphanyGraphDescriptions;
-  layoutAlgorithms?: EpiphanyGraphLayoutAlgorithms;
+  layoutMode?: EpiphanyGraphLayoutModeConfig;
+  motion?: EpiphanyGraphMotionOptions | boolean;
   sidebar?: ReactNode;
   sidebarWidth?: CSSProperties["width"];
   showSidebar?: boolean;
   overlayPanels?: boolean;
   viewportBackdrop?: ReactNode;
   viewportBackground?: CSSProperties["background"];
-  terrainForces?: TerrainForceOptions;
   focusSelection?: boolean;
   selectionFocusMode?: "preview" | "article";
   expandedNode?: {

@@ -29,6 +29,7 @@ export function GraphScreen({ state }: { state: EpiphanyGraphsState }) {
       state={state}
       layoutMode="combined-force"
       motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
+      performance="fast"
     />
   );
 }
@@ -38,6 +39,7 @@ The public viewer API is intentionally coarse:
 
 - `layoutMode`: `layered`, `stress`, `force`, or `combined-force`
 - `motion`: viewer-owned force tuning for combined-force layouts
+- `performance`: `quality`, `balanced`, `fast`, or explicit realtime budget knobs
 - `selection`, `focusSelection`, `expandedNode`, and callbacks for app integration
 - typed state and event payloads
 

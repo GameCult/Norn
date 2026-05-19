@@ -54,6 +54,15 @@ export type EpiphanyGraphLayoutMode = "layered" | "stress" | "force" | "combined
 export type EpiphanyGraphLayoutModeConfig =
   | EpiphanyGraphLayoutMode
   | Partial<Record<GraphKey, EpiphanyGraphLayoutMode>>;
+export type EpiphanyGraphPerformancePreset = "quality" | "balanced" | "fast";
+
+export interface EpiphanyGraphPerformanceOptions {
+  preset?: EpiphanyGraphPerformancePreset;
+  targetFps?: number;
+  maxAnimatedNodes?: number;
+  edgeRefreshRate?: number;
+  maxTimeStepMs?: number;
+}
 
 export interface EpiphanyGraphMotionOptions {
   enabled?: boolean;
@@ -117,6 +126,7 @@ export interface EpiphanyGraphViewerProps {
   graphDescriptions?: EpiphanyGraphDescriptions;
   layoutMode?: EpiphanyGraphLayoutModeConfig;
   motion?: EpiphanyGraphMotionOptions | boolean;
+  performance?: EpiphanyGraphPerformancePreset | EpiphanyGraphPerformanceOptions;
   sidebar?: ReactNode;
   sidebarWidth?: CSSProperties["width"];
   showSidebar?: boolean;

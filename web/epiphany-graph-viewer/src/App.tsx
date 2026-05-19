@@ -70,6 +70,7 @@ export function App() {
           state={mockEpiphanyGraphState}
           layoutMode="combined-force"
           motion={{ strength: 1.08, flow: 1.1, orbit: 0.82, lift: 0.9 }}
+          performance="fast"
         />
       </section>
     </main>

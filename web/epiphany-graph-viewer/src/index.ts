@@ -7,6 +7,8 @@ export type {
   EpiphanyGraphLayoutMode,
   EpiphanyGraphLayoutModeConfig,
   EpiphanyGraphMotionOptions,
+  EpiphanyGraphPerformanceOptions,
+  EpiphanyGraphPerformancePreset,
   EpiphanyGraphNode,
   EpiphanyGraphsState,
   EpiphanyGraphViewerProps,

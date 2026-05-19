@@ -59,6 +59,7 @@ export function Screen() {
       state={state}
       layoutMode="combined-force"
       motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
+      performance="fast"
     />
   );
 }
@@ -69,7 +70,7 @@ export function Screen() {
 The package exports:
 
 - `EpiphanyGraphViewer`
-- state, selection, node, edge, layout mode, motion, and event payload types
+- state, selection, node, edge, layout mode, motion, performance, and event payload types
 
 The package does not export demo data, validation helpers, ELK probes, SVG renderers,
 or engine controls. Those are implementation furniture. Consumers get the couch, not
@@ -114,3 +115,39 @@ tune the viewer-owned model:
 
 `emitNodeEnvelopes` dispatches `epiphanygraph-node-envelopes` from the viewport for
 backdrops that want node-aware effects without owning graph physics.
+
+## Performance
+
+The viewer is tuned as a realtime machine. Clients choose a speed budget, and the
+viewer adjusts animation frequency, node motion budget, edge refresh rate, and time
+step stability.
+
+```tsx
+<EpiphanyGraphViewer
+  state={state}
+  layoutMode="combined-force"
+  performance="fast"
+/>
+```
+
+Presets:
+
+- `quality`: 60 FPS target, all practical nodes animated, edges refreshed every frame
+- `balanced`: 40 FPS target, capped node motion, edges refreshed every other step
+- `fast`: 24 FPS target, smaller animated-node budget, edges refreshed every third step
+
+Use explicit knobs when the host app knows its budget:
+
+```tsx
+<EpiphanyGraphViewer
+  state={state}
+  layoutMode="combined-force"
+  performance={{
+    preset: "fast",
+    targetFps: 30,
+    maxAnimatedNodes: 120,
+    edgeRefreshRate: 3,
+    maxTimeStepMs: 24,
+  }}
+/>
+```

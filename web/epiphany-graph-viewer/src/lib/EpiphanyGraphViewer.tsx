@@ -15,6 +15,8 @@ import type {
   EpiphanyGraphLink,
   EpiphanyGraphLayoutModeConfig,
   EpiphanyGraphMotionOptions,
+  EpiphanyGraphPerformanceOptions,
+  EpiphanyGraphPerformancePreset,
   EpiphanyGraphViewerProps,
   EpiphanyValidationIssue,
   GraphKey,
@@ -59,6 +61,7 @@ export function EpiphanyGraphViewer({
   graphDescriptions,
   layoutMode = "layered",
   motion,
+  performance,
   sidebar,
   sidebarWidth = 330,
   showSidebar = true,
@@ -87,6 +90,7 @@ export function EpiphanyGraphViewer({
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dynamicStateRef = useRef<Record<GraphKey, DynamicNodeState[]> | null>(null);
+  const dynamicLayoutRef = useRef<Record<GraphKey, GraphLayout> | null>(null);
   const wheelStateRef = useRef({
     activeGraphKey,
     transforms,
@@ -114,6 +118,8 @@ export function EpiphanyGraphViewer({
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
   const motionKey = motionOptions ? motionOptionsCacheKey(motionOptions) : "off";
+  const performanceOptions = resolvePerformanceOptions(performance);
+  const performanceKey = performanceOptionsCacheKey(performanceOptions);
   const updateSelection = (nextSelection: ViewerSelection | null) => {
     if (controlledSelection === undefined) {
       setLocalSelection(nextSelection);
@@ -145,6 +151,7 @@ export function EpiphanyGraphViewer({
         }
         setLayouts(nextLayouts);
         setDynamicLayouts(nextLayouts);
+        dynamicLayoutRef.current = nextLayouts;
         dynamicStateRef.current = {
           architecture: dynamicNodesFromLayout(nextLayouts.architecture),
           dataflow: dynamicNodesFromLayout(nextLayouts.dataflow),
@@ -170,9 +177,21 @@ export function EpiphanyGraphViewer({
     }
 
     let frameId = 0;
-    let lastTime = performance.now();
+    let lastTime = globalThis.performance.now();
+    let lastStepTime = lastTime;
+    let stepIndex = 0;
     const tick = (time: number) => {
-      const dt = Math.min(0.034, Math.max(0.001, (time - lastTime) / 1000));
+      const minFrameMs = 1000 / performanceOptions.targetFps;
+      if (time - lastStepTime < minFrameMs) {
+        frameId = requestAnimationFrame(tick);
+        return;
+      }
+      stepIndex += 1;
+      lastStepTime = time;
+      const dt = Math.min(
+        performanceOptions.maxTimeStepMs / 1000,
+        Math.max(0.001, (time - lastTime) / 1000),
+      );
       lastTime = time;
       const next = stepDynamicLayouts({
         baseLayouts: layouts,
@@ -185,8 +204,12 @@ export function EpiphanyGraphViewer({
         viewportHeight: viewportSize.height,
         dt,
         time: time / 1000,
+        maxAnimatedNodes: performanceOptions.maxAnimatedNodes,
+        refreshEdges: stepIndex % performanceOptions.edgeRefreshRate === 0,
+        previousLayout: dynamicLayoutRef.current?.[activeGraphKey] ?? null,
       });
       if (next) {
+        dynamicLayoutRef.current = next.layouts;
         setDynamicLayouts(next.layouts);
       }
       frameId = requestAnimationFrame(tick);
@@ -197,6 +220,7 @@ export function EpiphanyGraphViewer({
     activeGraphKey,
     layouts,
     motionKey,
+    performanceKey,
     transforms,
     viewportSize.height,
     viewportSize.width,
@@ -1464,6 +1488,73 @@ function motionOptionsCacheKey(options: EpiphanyGraphMotionOptions) {
   ].join("|");
 }
 
+function resolvePerformanceOptions(
+  performance: EpiphanyGraphPerformancePreset | EpiphanyGraphPerformanceOptions | undefined,
+): Required<EpiphanyGraphPerformanceOptions> {
+  const base = performancePresetDefaults(
+    typeof performance === "string" ? performance : performance?.preset ?? "balanced",
+  );
+  const overrides = typeof performance === "string" ? {} : performance ?? {};
+
+  return {
+    preset: overrides.preset ?? base.preset,
+    targetFps: clampWholeNumber(overrides.targetFps ?? base.targetFps, 1, 60),
+    maxAnimatedNodes: clampWholeNumber(overrides.maxAnimatedNodes ?? base.maxAnimatedNodes, 1, 5000),
+    edgeRefreshRate: clampWholeNumber(overrides.edgeRefreshRate ?? base.edgeRefreshRate, 1, 12),
+    maxTimeStepMs: clampWholeNumber(overrides.maxTimeStepMs ?? base.maxTimeStepMs, 8, 100),
+  };
+}
+
+function performancePresetDefaults(
+  preset: EpiphanyGraphPerformancePreset,
+): Required<EpiphanyGraphPerformanceOptions> {
+  if (preset === "quality") {
+    return {
+      preset,
+      targetFps: 60,
+      maxAnimatedNodes: 5000,
+      edgeRefreshRate: 1,
+      maxTimeStepMs: 34,
+    };
+  }
+
+  if (preset === "fast") {
+    return {
+      preset,
+      targetFps: 24,
+      maxAnimatedNodes: 90,
+      edgeRefreshRate: 3,
+      maxTimeStepMs: 24,
+    };
+  }
+
+  return {
+    preset,
+    targetFps: 40,
+    maxAnimatedNodes: 240,
+    edgeRefreshRate: 2,
+    maxTimeStepMs: 28,
+  };
+}
+
+function performanceOptionsCacheKey(options: Required<EpiphanyGraphPerformanceOptions>) {
+  return [
+    options.preset,
+    options.targetFps,
+    options.maxAnimatedNodes,
+    options.edgeRefreshRate,
+    options.maxTimeStepMs,
+  ].join("|");
+}
+
+function clampWholeNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+
+  return Math.round(clamp(value, min, max));
+}
+
 function sampleCombinedForce(
   x: number,
   y: number,
@@ -1538,6 +1629,9 @@ function stepDynamicLayouts({
   viewportHeight,
   dt,
   time,
+  maxAnimatedNodes,
+  refreshEdges,
+  previousLayout,
 }: {
   baseLayouts: Record<GraphKey, GraphLayout>;
   states: React.MutableRefObject<Record<GraphKey, DynamicNodeState[]> | null>;
@@ -1549,6 +1643,9 @@ function stepDynamicLayouts({
   viewportHeight: number;
   dt: number;
   time: number;
+  maxAnimatedNodes: number;
+  refreshEdges: boolean;
+  previousLayout: GraphLayout | null;
 }): { layouts: Record<GraphKey, GraphLayout> } | null {
   if (!states.current) {
     states.current = {
@@ -1571,8 +1668,13 @@ function stepDynamicLayouts({
   const bounds = nodeAabb(baseLayout.nodes);
   const centerX = baseLayout.width * 0.5;
   const centerY = baseLayout.height * 0.5;
+  const animatedNodeIds = animatedNodeIdSet(baseLayout.nodes, maxAnimatedNodes);
 
   for (const node of baseLayout.nodes) {
+    if (animatedNodeIds && !animatedNodeIds.has(node.id)) {
+      continue;
+    }
+
     let dynamic = stateLookup.get(node.id);
     if (!dynamic) {
       dynamic = { id: node.id, x: node.x, y: node.y, vx: 0, vy: 0 };
@@ -1613,7 +1715,13 @@ function stepDynamicLayouts({
     dynamic.y += dynamic.vy * dt;
   }
 
-  const nextActiveLayout = layoutWithDynamicNodes(baseLayout, graphState, nodeLookup);
+  const nextActiveLayout = layoutWithDynamicNodes(
+    baseLayout,
+    graphState,
+    nodeLookup,
+    refreshEdges,
+    previousLayout,
+  );
   if (motionOptions.emitNodeEnvelopes && viewportElement) {
     viewportElement.dispatchEvent(new CustomEvent<NodeEnvelope[]>("epiphanygraph-node-envelopes", {
       bubbles: true,
@@ -1635,16 +1743,39 @@ function stepDynamicLayouts({
   };
 }
 
+function animatedNodeIdSet(nodes: PositionedNode[], maxAnimatedNodes: number) {
+  if (nodes.length <= maxAnimatedNodes) {
+    return null;
+  }
+
+  return new Set(
+    [...nodes]
+      .sort((left, right) => nodeAnimationScore(right) - nodeAnimationScore(left))
+      .slice(0, maxAnimatedNodes)
+      .map((node) => node.id),
+  );
+}
+
+function nodeAnimationScore(node: PositionedNode) {
+  return node.degree * 2 + node.linkCount * 3;
+}
+
 function layoutWithDynamicNodes(
   layout: GraphLayout,
   dynamicNodes: DynamicNodeState[],
   nodeLookup: Map<string, PositionedNode>,
+  refreshEdges: boolean,
+  previousLayout: GraphLayout | null,
 ): GraphLayout {
   const dynamicLookup = new Map(dynamicNodes.map((node) => [node.id, node]));
   const nodes = layout.nodes.map((node) => {
     const dynamic = dynamicLookup.get(node.id);
     return dynamic ? { ...node, x: dynamic.x, y: dynamic.y } : node;
   });
+  if (!refreshEdges) {
+    return { ...layout, nodes, edges: previousLayout?.edges ?? layout.edges };
+  }
+
   const nextLookup = new Map(nodes.map((node) => [node.id, node]));
   const edges = layout.edges.map((edge) => {
     const source = nextLookup.get(edge.source_id) ?? nodeLookup.get(edge.source_id);

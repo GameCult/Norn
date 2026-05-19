@@ -78,6 +78,7 @@ export function EpiphanyGraphViewer({
   focusSelection = false,
   selectionFocusMode = "preview",
   expandedNode,
+  nodeArticle,
   onExpandedNodeClick,
   onSelectionChange,
   onCodeRefSelect,
@@ -711,19 +712,36 @@ export function EpiphanyGraphViewer({
               {activeLayout.nodes.map((node) => {
                 const isSelected = selectedNode?.id === node.id;
                 const isNeighbor = neighboringIds.has(node.id);
-                const isExpandedSelectedNode = Boolean(expandedNodeMatches && isSelected && expandedNode);
-                const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
                 const metrics = expandedNodeViewportMetrics(node, activeTransform, viewportSize.width, viewportSize.height);
-                const rendersArticle = isExpandedSelectedNode && metrics.article > 0.18;
+                const selectionEmphasis = nodeOpacity(node, selectedNode, isNeighbor);
+                const viewportEmphasis = smoothstep(0.1, 0.72, metrics.reveal);
+                const emphasis = Math.max(selectionEmphasis, viewportEmphasis);
+                const legacyExpandedNode =
+                  expandedNodeMatches && isSelected && expandedNode
+                    ? {
+                        content: expandedNode.content,
+                        className: expandedNode.className,
+                        ariaLabel: expandedNode.ariaLabel,
+                      }
+                    : null;
+                const providedArticle = nodeArticle
+                  ? {
+                      content: nodeArticle.content(node),
+                      className: nodeArticle.className,
+                      ariaLabel: nodeArticle.ariaLabel?.(node),
+                    }
+                  : null;
+                const nodeArticleSurface = providedArticle?.content ? providedArticle : legacyExpandedNode;
+                const rendersArticle = Boolean(nodeArticleSurface && metrics.article > 0.18);
                 const rendersCompact = !rendersArticle && metrics.preview < 0.08;
-                const className = isExpandedSelectedNode
-                  ? ["epiphany-graph-node-surface", expandedNode?.className].filter(Boolean).join(" ")
+                const className = nodeArticleSurface
+                  ? ["epiphany-graph-node-surface", nodeArticleSurface.className].filter(Boolean).join(" ")
                   : "epiphany-graph-node-surface";
 
                 return (
                   <div
                     key={node.id}
-                    aria-label={isExpandedSelectedNode ? expandedNode?.ariaLabel : node.title}
+                    aria-label={nodeArticleSurface?.ariaLabel ?? node.title}
                     className={className}
                     onClickCapture={(event) => {
                       if (!rendersArticle) {
@@ -811,7 +829,7 @@ export function EpiphanyGraphViewer({
                       cursor: rendersArticle ? "grab" : "pointer",
                     }}
                   >
-                    {rendersArticle ? expandedNode?.content : rendersCompact ? <CompactNodeSurface node={node} /> : <DefaultNodeSurface node={node} />}
+                    {rendersArticle ? nodeArticleSurface?.content : rendersCompact ? <CompactNodeSurface node={node} /> : <DefaultNodeSurface node={node} />}
                   </div>
                 );
               })}

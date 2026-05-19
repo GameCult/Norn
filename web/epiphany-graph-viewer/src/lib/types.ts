@@ -143,6 +143,11 @@ export interface EpiphanyGraphViewerProps {
     className?: string;
     ariaLabel?: string;
   };
+  nodeArticle?: {
+    className?: string;
+    ariaLabel?: (node: PositionedNode) => string;
+    content: (node: PositionedNode) => ReactNode | null;
+  };
   onExpandedNodeClick?: MouseEventHandler<HTMLElement>;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (

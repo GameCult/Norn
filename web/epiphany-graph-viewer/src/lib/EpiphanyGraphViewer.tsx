@@ -616,17 +616,11 @@ export function EpiphanyGraphViewer({
                         strokeLinejoin="round"
                         vectorEffect="non-scaling-stroke"
                       />
-                      {!expandedNodeMatches &&
-                        (isSelected || isConnected || (!compactGraph && activeTransform.scale > 1.75)) &&
-                        edge.label?.trim() && (
+                      {isSelected && edge.label?.trim() && (
                         <g
-                          transform={`translate(${edge.midpoint.x} ${edge.midpoint.y})`}
+                          transform={`translate(${edge.midpoint.x} ${edge.midpoint.y}) scale(${1 / Math.max(0.001, activeTransform.scale)})`}
                           pointerEvents="none"
-                          opacity={
-                            isSelected || isConnected
-                              ? 1
-                              : fadeBetween(activeTransform.scale, 1.75, 2.05)
-                          }
+                          opacity={0.95}
                         >
                           <rect
                             x={-44}

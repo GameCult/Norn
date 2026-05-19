@@ -101,6 +101,8 @@ export function EpiphanyGraphViewer({
   const expandedNodeScrollRef = useRef<{
     active: boolean;
     pointerId: number;
+    moved: boolean;
+    suppressClick: boolean;
     originX: number;
     originY: number;
     scrollLeft: number;
@@ -678,7 +680,20 @@ export function EpiphanyGraphViewer({
                     key={node.id}
                     aria-label={isExpandedSelectedNode ? expandedNode?.ariaLabel : node.title}
                     className={className}
-                    onClickCapture={rendersArticle ? onExpandedNodeClick : undefined}
+                    onClickCapture={(event) => {
+                      if (!rendersArticle) {
+                        return;
+                      }
+
+                      if (expandedNodeScrollRef.current?.suppressClick) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        expandedNodeScrollRef.current.suppressClick = false;
+                        return;
+                      }
+
+                      onExpandedNodeClick?.(event);
+                    }}
                     onPointerDown={(event) => {
                       if (rendersArticle) {
                         handleExpandedNodePointerDown(event, expandedNodeScrollRef);
@@ -2141,6 +2156,8 @@ function handleExpandedNodePointerDown(
   scrollRef: React.MutableRefObject<{
     active: boolean;
     pointerId: number;
+    moved: boolean;
+    suppressClick: boolean;
     originX: number;
     originY: number;
     scrollLeft: number;
@@ -2152,9 +2169,12 @@ function handleExpandedNodePointerDown(
   }
 
   event.preventDefault();
+  event.stopPropagation();
   scrollRef.current = {
     active: true,
     pointerId: event.pointerId,
+    moved: false,
+    suppressClick: false,
     originX: event.clientX,
     originY: event.clientY,
     scrollLeft: event.currentTarget.scrollLeft,
@@ -2169,6 +2189,8 @@ function handleExpandedNodePointerMove(
   scrollRef: React.MutableRefObject<{
     active: boolean;
     pointerId: number;
+    moved: boolean;
+    suppressClick: boolean;
     originX: number;
     originY: number;
     scrollLeft: number;
@@ -2180,8 +2202,15 @@ function handleExpandedNodePointerMove(
   }
 
   event.preventDefault();
-  event.currentTarget.scrollLeft = scrollRef.current.scrollLeft - (event.clientX - scrollRef.current.originX);
-  event.currentTarget.scrollTop = scrollRef.current.scrollTop - (event.clientY - scrollRef.current.originY);
+  event.stopPropagation();
+  const deltaX = event.clientX - scrollRef.current.originX;
+  const deltaY = event.clientY - scrollRef.current.originY;
+  if (Math.hypot(deltaX, deltaY) > 3) {
+    scrollRef.current.moved = true;
+    scrollRef.current.suppressClick = true;
+  }
+  event.currentTarget.scrollLeft = scrollRef.current.scrollLeft - deltaX;
+  event.currentTarget.scrollTop = scrollRef.current.scrollTop - deltaY;
 }
 
 function handleExpandedNodePointerUp(
@@ -2189,6 +2218,8 @@ function handleExpandedNodePointerUp(
   scrollRef: React.MutableRefObject<{
     active: boolean;
     pointerId: number;
+    moved: boolean;
+    suppressClick: boolean;
     originX: number;
     originY: number;
     scrollLeft: number;
@@ -2197,6 +2228,12 @@ function handleExpandedNodePointerUp(
 ) {
   if (!scrollRef.current || event.pointerId !== scrollRef.current.pointerId) {
     return;
+  }
+
+  event.stopPropagation();
+  if (scrollRef.current.moved) {
+    event.preventDefault();
+    scrollRef.current.suppressClick = true;
   }
 
   if (event.currentTarget.hasPointerCapture(scrollRef.current.pointerId)) {

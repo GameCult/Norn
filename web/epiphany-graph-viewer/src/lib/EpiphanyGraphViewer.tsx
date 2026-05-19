@@ -332,10 +332,6 @@ export function EpiphanyGraphViewer({
     Boolean(selectedNode) &&
     expandedNode?.graphKey === activeGraphKey &&
     expandedNode.nodeId === selectedNode?.id;
-  const expandedNodeMetrics =
-    expandedNodeMatches && selectedNode && viewportSize.width > 0 && viewportSize.height > 0
-      ? expandedNodeViewportMetrics(selectedNode, activeTransform, viewportSize.width, viewportSize.height)
-      : null;
 
   useEffect(() => {
     if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
@@ -658,310 +654,111 @@ export function EpiphanyGraphViewer({
                   );
                 })}
 
-                {activeLayout.nodes.map((node) => {
-                  const isSelected = selectedNode?.id === node.id;
-                  const isNeighbor = neighboringIds.has(node.id);
-                  const selectedNodeSurfaceOpacity =
-                    isSelected && expandedNodeMetrics ? expandedNodeMetrics.surfaceOpacity : 0;
-                  const isExpandedSelectedNode = expandedNodeMatches && isSelected;
-                  const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
-                  const copyLayout = buildNodeCopyLayout(node);
-                  const clipId = `node-clip-${safeDomId(activeGraphKey)}-${safeDomId(node.id)}`;
-                  const badgeRadius = Math.max(6, Math.min(12, node.width / 4, node.height / 3));
-                  const badgeX = Math.max(badgeRadius + 4, Math.min(20, node.width / 2));
-                  const badgeY = node.height < 40 ? node.height / 2 : 20;
-                  const statusText = node.status?.trim() ?? "";
-                  const showStatus = Boolean(statusText) && node.width >= 176 && node.height >= 72;
-                  const showLinkCount = node.linkCount > 0 && node.width >= 150 && node.height >= 86;
-                  const titleX = badgeX + badgeRadius + 14;
-                  const titleY = node.height < 76 ? node.height / 2 + 4 : 26;
-                  return (
-                    <g
-                      key={node.id}
-                      transform={`translate(${node.x} ${node.y})`}
-                      opacity={isExpandedSelectedNode ? emphasis * (1 - selectedNodeSurfaceOpacity) : emphasis}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        updateSelection({
-                          kind: "node",
-                          graphKey: activeGraphKey,
-                          nodeId: node.id,
-                        });
-                        explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
-                        if (focusSelection && viewportSize.width > 0 && viewportSize.height > 0) {
-                          focusNodeInViewport(
-                            node,
-                            activeGraphKey,
-                            "preview",
-                            viewportSize.width,
-                            viewportSize.height,
-                            setTransforms,
-                          );
-                        }
-                      }}
-                      onDoubleClick={(event) => {
-                        event.stopPropagation();
-                        updateSelection({
-                          kind: "node",
-                          graphKey: activeGraphKey,
-                          nodeId: node.id,
-                        });
-                        explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
-                        if (viewportSize.width > 0 && viewportSize.height > 0) {
-                          focusNodeInViewport(
-                            node,
-                            activeGraphKey,
-                            "article",
-                            viewportSize.width,
-                            viewportSize.height,
-                            setTransforms,
-                          );
-                        }
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <rect
-                        x={0}
-                        y={0}
-                        width={node.width}
-                        height={node.height}
-                        rx={26}
-                        fill={node.fill}
-                        stroke={node.stroke}
-                        strokeWidth={isSelected ? 2.8 : isNeighbor ? 2.1 : 1.4}
-                        vectorEffect="non-scaling-stroke"
-                        filter={isSelected ? "url(#selectedGlow)" : "url(#nodeGlow)"}
-                      />
-                      <clipPath id={clipId}>
-                        <rect x={0} y={0} width={node.width} height={node.height} rx={26} />
-                      </clipPath>
-                      <g clipPath={`url(#${clipId})`}>
-                        <rect
-                          x={6}
-                          y={6}
-                          width={Math.max(0, node.width - 12)}
-                          height={Math.max(0, node.height - 12)}
-                          rx={21}
-                          fill="rgba(255, 255, 255, 0.02)"
-                          stroke="rgba(255, 255, 255, 0.06)"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                        <circle
-                          cx={badgeX}
-                          cy={badgeY}
-                          r={badgeRadius}
-                          fill={node.stroke}
-                          stroke="rgba(229, 238, 248, 0.24)"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                        <text
-                          x={badgeX}
-                          y={badgeY + badgeRadius * 0.34}
-                          textAnchor="middle"
-                          fill="#071019"
-                          fontSize={Math.max(6, badgeRadius * 0.82)}
-                          fontWeight={800}
-                        >
-                          {node.badgeText}
-                        </text>
-
-                        {showStatus && activeTransform.scale > 0.66 && (
-                          <g transform={`translate(${node.width - 78} 10)`} opacity={fadeBetween(activeTransform.scale, 0.62, 0.9)}>
-                          <rect
-                            x={0}
-                            y={0}
-                            width={68}
-                            height={18}
-                            rx={9}
-                            fill="rgba(5, 10, 22, 0.74)"
-                            stroke="rgba(255, 255, 255, 0.1)"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                          <text
-                            x={34}
-                            y={12.5}
-                            textAnchor="middle"
-                            fill={node.stroke}
-                            fontSize={8.5}
-                            fontWeight={700}
-                            letterSpacing="0.06em"
-                          >
-                            {statusText.toUpperCase()}
-                          </text>
-                          </g>
-                        )}
-
-                        {showLinkCount && (
-                          <g transform={`translate(${node.width - 27} ${node.height - 24})`}>
-                          <circle
-                            cx={0}
-                            cy={0}
-                            r={10}
-                            fill="rgba(5, 10, 22, 0.9)"
-                            stroke="#f9a8d4"
-                            strokeWidth={1.5}
-                            vectorEffect="non-scaling-stroke"
-                          />
-                          <text
-                            x={0}
-                            y={3.5}
-                            textAnchor="middle"
-                            fill="#fce7f3"
-                            fontSize={8.5}
-                            fontWeight={800}
-                          >
-                            {node.linkCount}
-                          </text>
-                          </g>
-                        )}
-
-                        <g opacity={node.width >= 92 && node.height >= 40 ? fadeBetween(activeTransform.scale, 0.42, 0.72) : 0} pointerEvents="none">
-                          {renderTextLines(
-                            copyLayout.titleLines,
-                            titleX,
-                            titleY,
-                            15,
-                            {
-                              fill: "#f8fbff",
-                              fontSize: 13,
-                              fontWeight: 800,
-                            },
-                          )}
-                        </g>
-
-                        <g opacity={node.width >= 136 && node.height >= 68 ? fadeBetween(activeTransform.scale, 1.02, 1.44) : 0} pointerEvents="none">
-                          {renderTextLines(
-                            copyLayout.purposeLines,
-                            16,
-                            copyLayout.purposeStartY,
-                            12.5,
-                            {
-                              fill: "rgba(229, 238, 248, 0.88)",
-                              fontSize: 10.6,
-                            },
-                          )}
-                        </g>
-
-                        <g opacity={node.width >= 190 && node.height >= 96 ? fadeBetween(activeTransform.scale, 1.72, 2.18) : 0} pointerEvents="none">
-                          {renderTextLines(
-                            copyLayout.mechanismLines,
-                            16,
-                            copyLayout.mechanismStartY,
-                            11.5,
-                            {
-                              fill: "rgba(103, 232, 249, 0.86)",
-                              fontSize: 9.4,
-                            },
-                          )}
-                          {renderTextLines(
-                            copyLayout.metaphorLines,
-                            16,
-                            copyLayout.metaphorStartY,
-                            11.2,
-                            {
-                              fill: "rgba(244, 114, 182, 0.84)",
-                              fontSize: 9.1,
-                            },
-                          )}
-                        </g>
-                      </g>
-                    </g>
-                  );
-                })}
               </g>
             </svg>
           )}
-          {expandedNodeMatches && expandedNodeMetrics && expandedNode && (
+          {status === "ready" && activeLayout && (
             <div
-              key={`${expandedNode.graphKey}:${expandedNode.nodeId}`}
-              aria-label={expandedNode.ariaLabel}
-              className={expandedNode.className}
-              onClickCapture={onExpandedNodeClick}
-              onPointerDown={(event) => handleExpandedNodePointerDown(event, expandedNodeScrollRef)}
-              onPointerMove={(event) => handleExpandedNodePointerMove(event, expandedNodeScrollRef)}
-              onPointerUp={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
-              onPointerCancel={(event) => handleExpandedNodePointerUp(event, expandedNodeScrollRef)}
-              onDoubleClick={(event) => {
-                if (!selectedNode || isInteractiveArticleTarget(event.target)) {
-                  return;
-                }
-
-                event.stopPropagation();
-                if (viewportSize.width > 0 && viewportSize.height > 0) {
-                  focusNodeInViewport(
-                    selectedNode,
-                    activeGraphKey,
-                    "article",
-                    viewportSize.width,
-                    viewportSize.height,
-                    setTransforms,
-                  );
-                }
-              }}
-              data-graph-key={activeGraphKey}
-              data-node-id={selectedNode?.id}
-              data-node-stage={expandedNodeMetrics.stage}
+              aria-label={`${labels[activeGraphKey]} node surfaces`}
               style={{
                 position: "absolute",
-                left: expandedNodeMetrics.left,
-                top: expandedNodeMetrics.top,
-                width: expandedNodeMetrics.width,
-                height: expandedNodeMetrics.height,
-                "--node-screen-area-ratio": expandedNodeMetrics.areaRatio,
-                "--node-focus-proximity": expandedNodeMetrics.focusProximity,
-                "--node-reveal": expandedNodeMetrics.reveal,
-                "--node-preview": expandedNodeMetrics.preview,
-                "--node-article": expandedNodeMetrics.article,
-                "--node-compact": 1 - expandedNodeMetrics.preview,
-                "--node-pad-y": `${0.62 + expandedNodeMetrics.article * 1.2}rem`,
-                "--node-pad-x": `${0.82 + expandedNodeMetrics.article * 1.4}rem`,
-                "--node-badge-size": `${3 + expandedNodeMetrics.preview * 0.85 + expandedNodeMetrics.article * 0.75}rem`,
-                "--node-title-size": `${1.08 + expandedNodeMetrics.preview * 0.75 + expandedNodeMetrics.article * 0.85}rem`,
-                "--node-title-max-height": `${1.12 + expandedNodeMetrics.preview * 1.45 + expandedNodeMetrics.article * 3.2}em`,
-                "--node-kicker-margin": `${0.12 + expandedNodeMetrics.preview * 0.35}rem`,
-                "--node-panel-gap": `${0.72 + expandedNodeMetrics.preview * 0.35}rem`,
-                "--node-header-margin": `${expandedNodeMetrics.preview}rem`,
-                "--node-preview-height": `${expandedNodeMetrics.preview * 12}rem`,
-                "--node-status-margin": `${expandedNodeMetrics.preview}rem`,
-                "--node-article-height": `${expandedNodeMetrics.article * 420}rem`,
-                "--node-note-list-height": `${expandedNodeMetrics.article * 80}rem`,
-                "--node-article-offset": `${(1 - expandedNodeMetrics.article) * 0.65}rem`,
-                "--node-badge-glow": `${1 + expandedNodeMetrics.preview * 1.4}rem`,
+                inset: 0,
                 zIndex: 4,
-                overflow: "auto",
-                borderRadius: expandedNodeMetrics.borderRadius,
-                background:
-                  "linear-gradient(145deg, rgba(7, 22, 32, 0.96), rgba(6, 11, 23, 0.94))",
-                border: "1px solid rgba(186, 230, 253, 0.72)",
-                boxShadow:
-                  "0 0 0 1px rgba(34, 211, 238, 0.16), 0 28px 90px rgba(0, 0, 0, 0.48), 0 0 58px rgba(34, 211, 238, 0.24)",
-                pointerEvents: expandedNodeMetrics.surfaceOpacity > 0.2 ? "auto" : "none",
-                cursor: "grab",
-                opacity: expandedNodeMetrics.surfaceOpacity,
-              } as CSSProperties & {
-                "--node-screen-area-ratio": number;
-                "--node-focus-proximity": number;
-                "--node-reveal": number;
-                "--node-preview": number;
-                "--node-article": number;
-                "--node-compact": number;
-                "--node-pad-y": string;
-                "--node-pad-x": string;
-                "--node-badge-size": string;
-                "--node-title-size": string;
-                "--node-title-max-height": string;
-                "--node-kicker-margin": string;
-                "--node-panel-gap": string;
-                "--node-header-margin": string;
-                "--node-preview-height": string;
-                "--node-status-margin": string;
-                "--node-article-height": string;
-                "--node-note-list-height": string;
-                "--node-article-offset": string;
-                "--node-badge-glow": string;
+                pointerEvents: "none",
               }}
             >
-              {expandedNode.content}
+              {activeLayout.nodes.map((node) => {
+                const isSelected = selectedNode?.id === node.id;
+                const isNeighbor = neighboringIds.has(node.id);
+                const isExpandedSelectedNode = Boolean(expandedNodeMatches && isSelected && expandedNode);
+                const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
+                const metrics = expandedNodeViewportMetrics(node, activeTransform, viewportSize.width, viewportSize.height);
+                const className = isExpandedSelectedNode
+                  ? ["epiphany-graph-node-surface", expandedNode?.className].filter(Boolean).join(" ")
+                  : "epiphany-graph-node-surface";
+
+                return (
+                  <div
+                    key={node.id}
+                    aria-label={isExpandedSelectedNode ? expandedNode?.ariaLabel : node.title}
+                    className={className}
+                    onClickCapture={isExpandedSelectedNode ? onExpandedNodeClick : undefined}
+                    onPointerDown={(event) => {
+                      if (isExpandedSelectedNode) {
+                        handleExpandedNodePointerDown(event, expandedNodeScrollRef);
+                      }
+                    }}
+                    onPointerMove={(event) => {
+                      if (isExpandedSelectedNode) {
+                        handleExpandedNodePointerMove(event, expandedNodeScrollRef);
+                      }
+                    }}
+                    onPointerUp={(event) => {
+                      if (isExpandedSelectedNode) {
+                        handleExpandedNodePointerUp(event, expandedNodeScrollRef);
+                      }
+                    }}
+                    onPointerCancel={(event) => {
+                      if (isExpandedSelectedNode) {
+                        handleExpandedNodePointerUp(event, expandedNodeScrollRef);
+                      }
+                    }}
+                    onClick={(event) => {
+                      if (isInteractiveArticleTarget(event.target)) {
+                        return;
+                      }
+                      event.stopPropagation();
+                      updateSelection({
+                        kind: "node",
+                        graphKey: activeGraphKey,
+                        nodeId: node.id,
+                      });
+                      explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                      if (focusSelection && viewportSize.width > 0 && viewportSize.height > 0) {
+                        focusNodeInViewport(
+                          node,
+                          activeGraphKey,
+                          "preview",
+                          viewportSize.width,
+                          viewportSize.height,
+                          setTransforms,
+                        );
+                      }
+                    }}
+                    onDoubleClick={(event) => {
+                      if (isInteractiveArticleTarget(event.target)) {
+                        return;
+                      }
+                      event.stopPropagation();
+                      updateSelection({
+                        kind: "node",
+                        graphKey: activeGraphKey,
+                        nodeId: node.id,
+                      });
+                      explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                      if (viewportSize.width > 0 && viewportSize.height > 0) {
+                        focusNodeInViewport(
+                          node,
+                          activeGraphKey,
+                          "article",
+                          viewportSize.width,
+                          viewportSize.height,
+                          setTransforms,
+                        );
+                      }
+                    }}
+                    data-graph-key={activeGraphKey}
+                    data-node-id={node.id}
+                    data-node-stage={metrics.stage}
+                    style={{
+                      ...nodeSurfaceStyle(node, metrics, emphasis, isSelected, isNeighbor),
+                      cursor: isExpandedSelectedNode ? "grab" : "pointer",
+                    }}
+                  >
+                    {isExpandedSelectedNode ? expandedNode?.content : <DefaultNodeSurface node={node} />}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1875,14 +1672,24 @@ function expandedNodeViewportMetrics(
   const reveal = readableFootprint * (0.55 + focusProximity * 0.45);
   const preview = smoothstep(0.16, 0.58, reveal);
   const article = smoothstep(0.58, 0.92, reveal);
-  const compactRadius = Math.min(999, Math.max(20, height / 2));
-  const borderRadius = lerp(compactRadius, 32, article);
+  const borderRadius = lerp(16, 32, article);
+  const compactWidth = Math.min(width, clamp(94 + node.title.length * 7.8, 132, 360));
+  const compactHeight = Math.min(height, 58);
+  const visualGrowth = Math.max(preview, article);
+  const visualWidth = lerp(compactWidth, width, visualGrowth);
+  const visualHeight = lerp(compactHeight, height, visualGrowth);
+  const visualLeft = centerX - visualWidth / 2;
+  const visualTop = centerY - visualHeight / 2;
 
   return {
-    left,
-    top,
-    width,
-    height,
+    left: visualLeft,
+    top: visualTop,
+    width: visualWidth,
+    height: visualHeight,
+    layoutLeft: left,
+    layoutTop: top,
+    layoutWidth: width,
+    layoutHeight: height,
     areaRatio,
     focusProximity,
     reveal,
@@ -1892,6 +1699,192 @@ function expandedNodeViewportMetrics(
     surfaceOpacity: smoothstep(0.04, 0.2, reveal),
     stage: expandedNodeStage(width, height, areaRatio),
   };
+}
+
+function nodeSurfaceStyle(
+  node: PositionedNode,
+  metrics: ReturnType<typeof expandedNodeViewportMetrics>,
+  emphasis: number,
+  isSelected: boolean,
+  isNeighbor: boolean,
+) {
+  const preview = metrics.preview;
+  const article = metrics.article;
+  const selectedGlow = isSelected ? 0.42 : isNeighbor ? 0.24 : 0.14;
+
+  return {
+    position: "absolute",
+    left: metrics.left,
+    top: metrics.top,
+    width: metrics.width,
+    height: metrics.height,
+    "--node-screen-area-ratio": metrics.areaRatio,
+    "--node-focus-proximity": metrics.focusProximity,
+    "--node-reveal": metrics.reveal,
+    "--node-preview": preview,
+    "--node-article": article,
+    "--node-compact": 1 - preview,
+    "--node-pad-y": `${0.5 + article * 1.32}rem`,
+    "--node-pad-x": `${0.58 + article * 1.64}rem`,
+    "--node-badge-size": `${2.2 + preview * 1.25 + article * 1.1}rem`,
+    "--node-title-size": `${0.92 + preview * 0.9 + article * 0.86}rem`,
+    "--node-title-max-height": `${1.08 + preview * 1.62 + article * 3.2}em`,
+    "--node-kicker-margin": `${0.1 + preview * 0.34}rem`,
+    "--node-panel-gap": `${0.55 + preview * 0.45}rem`,
+    "--node-header-margin": `${preview}rem`,
+    "--node-preview-height": `${preview * 12}rem`,
+    "--node-status-margin": `${preview}rem`,
+    "--node-article-height": `${article * 420}rem`,
+    "--node-note-list-height": `${article * 80}rem`,
+    "--node-article-offset": `${(1 - article) * 0.65}rem`,
+    "--node-badge-glow": `${0.8 + preview * 1.6}rem`,
+    zIndex: isSelected ? 5 : isNeighbor ? 4 : 3,
+    boxSizing: "border-box",
+    display: "block",
+    minWidth: 0,
+    minHeight: 0,
+    overflow: isSelected && article > 0.2 ? "auto" : "hidden",
+    overscrollBehavior: "contain",
+    padding: `var(--node-pad-y) var(--node-pad-x)`,
+    borderRadius: metrics.borderRadius,
+    color: "#effcf8",
+    background:
+      isSelected
+        ? "linear-gradient(145deg, rgba(7, 22, 32, 0.97), rgba(6, 11, 23, 0.94))"
+        : node.fill,
+    border: `1px solid ${isSelected ? "rgba(186, 230, 253, 0.76)" : node.stroke}`,
+    boxShadow:
+      `0 0 0 1px rgba(34, 211, 238, ${selectedGlow}), 0 18px 54px rgba(0, 0, 0, 0.34), 0 0 42px rgba(34, 211, 238, ${selectedGlow})`,
+    opacity: Math.max(0.18, emphasis),
+    pointerEvents: "auto",
+    transition:
+      "border-radius 120ms ease, box-shadow 120ms ease, padding 120ms ease, opacity 120ms ease",
+  } as CSSProperties & NodeSurfaceCustomProperties;
+}
+
+type NodeSurfaceCustomProperties = {
+  "--node-screen-area-ratio": number;
+  "--node-focus-proximity": number;
+  "--node-reveal": number;
+  "--node-preview": number;
+  "--node-article": number;
+  "--node-compact": number;
+  "--node-pad-y": string;
+  "--node-pad-x": string;
+  "--node-badge-size": string;
+  "--node-title-size": string;
+  "--node-title-max-height": string;
+  "--node-kicker-margin": string;
+  "--node-panel-gap": string;
+  "--node-header-margin": string;
+  "--node-preview-height": string;
+  "--node-status-margin": string;
+  "--node-article-height": string;
+  "--node-note-list-height": string;
+  "--node-article-offset": string;
+  "--node-badge-glow": string;
+};
+
+function DefaultNodeSurface({ node }: { node: PositionedNode }) {
+  return (
+    <article
+      style={{
+        display: "grid",
+        gap: "calc(var(--node-preview) * 0.8rem)",
+        height: "100%",
+        minWidth: 0,
+        overflow: "hidden",
+      }}
+    >
+      <header
+        style={{
+          display: "grid",
+          gridTemplateColumns: "var(--node-badge-size) minmax(0, 1fr)",
+          alignItems: "center",
+          gap: "var(--node-panel-gap)",
+          minHeight: "var(--node-badge-size)",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            display: "grid",
+            width: "var(--node-badge-size)",
+            height: "var(--node-badge-size)",
+            placeItems: "center",
+            borderRadius: 999,
+            background: `linear-gradient(160deg, ${node.stroke}, #c2f5f0)`,
+            color: "#071019",
+            fontSize: "calc(var(--node-title-size) * 0.8)",
+            fontWeight: 900,
+            lineHeight: 1,
+            boxShadow:
+              "inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 var(--node-badge-glow) rgba(94, 234, 212, 0.3)",
+          }}
+        >
+          {node.badgeText}
+        </span>
+        <span style={{ minWidth: 0 }}>
+          <strong
+            style={{
+              display: "block",
+              maxHeight: "var(--node-title-max-height)",
+              overflow: "hidden",
+              color: "#f7fffb",
+              fontSize: "var(--node-title-size)",
+              lineHeight: 1.04,
+              letterSpacing: 0,
+            }}
+          >
+            {node.title}
+          </strong>
+          <span
+            style={{
+              display: "block",
+              maxHeight: "calc(var(--node-preview) * 2.8em)",
+              overflow: "hidden",
+              color: "rgba(103, 232, 249, 0.82)",
+              fontSize: "calc(var(--node-title-size) * 0.42)",
+              fontWeight: 800,
+              lineHeight: 1.15,
+              opacity: "var(--node-preview)",
+              textTransform: "uppercase",
+            }}
+          >
+            {node.status ?? `${node.linkCount} links`}
+          </span>
+        </span>
+      </header>
+      <p
+        style={{
+          maxHeight: "var(--node-preview-height)",
+          margin: 0,
+          overflow: "hidden",
+          color: "rgba(229, 238, 248, 0.86)",
+          fontSize: "calc(0.78rem + var(--node-article) * 0.18rem)",
+          lineHeight: 1.45,
+          opacity: "var(--node-preview)",
+        }}
+      >
+        {node.purpose}
+      </p>
+      {(node.mechanism || node.metaphor) && (
+        <p
+          style={{
+            maxHeight: "calc(var(--node-article) * 10rem)",
+            margin: 0,
+            overflow: "hidden",
+            color: "rgba(244, 114, 182, 0.82)",
+            fontSize: "0.84rem",
+            lineHeight: 1.45,
+            opacity: "var(--node-article)",
+          }}
+        >
+          {node.mechanism ?? node.metaphor}
+        </p>
+      )}
+    </article>
+  );
 }
 
 function expandedNodeStage(width: number, height: number, areaRatio: number) {
@@ -2219,10 +2212,6 @@ function isCompactGraphLayout(layout: GraphLayout) {
   return medianWidth < 96;
 }
 
-function safeDomId(value: string) {
-  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
-}
-
 function fadeBetween(value: number, start: number, end: number) {
   if (value <= start) {
     return 0;
@@ -2243,149 +2232,6 @@ function smoothstep(start: number, end: number, value: number) {
 
 function lerp(start: number, end: number, amount: number) {
   return start + (end - start) * clamp(amount, 0, 1);
-}
-
-function buildNodeCopyLayout(node: PositionedNode) {
-  const compactHeight = node.height < 76;
-  const reservesStatusLane = node.status?.trim() && node.width >= 176 && node.height >= 72;
-  const reservesLinkLane = node.linkCount > 0 && node.width >= 150 && node.height >= 86;
-  const titleLeftInset = node.height < 40 ? 32 : 46;
-  const titleRightInset = reservesStatusLane ? 92 : reservesLinkLane ? 48 : 18;
-  const titleWidth = Math.max(
-    28,
-    node.width - titleLeftInset - titleRightInset,
-  );
-  const bodyWidth = Math.max(80, node.width - 34);
-  const titleLines = wrapTextToLines(
-    node.title,
-    estimateCharacterCapacity(titleWidth, 7.4),
-    compactHeight ? 1 : 2,
-  );
-  const purposeLines = wrapTextToLines(
-    node.purpose,
-    estimateCharacterCapacity(bodyWidth, 6.15),
-    3,
-  );
-  const mechanismLines = node.mechanism?.trim()
-    ? wrapTextToLines(
-        node.mechanism,
-        estimateCharacterCapacity(bodyWidth, 6),
-        2,
-      )
-    : [];
-  const metaphorLines = node.metaphor?.trim()
-    ? wrapTextToLines(
-        node.metaphor,
-        estimateCharacterCapacity(bodyWidth, 6),
-        2,
-      )
-    : [];
-
-  const purposeStartY = 26 + titleLines.length * 15 + 12;
-  const mechanismStartY =
-    purposeStartY + purposeLines.length * 12.5 + (purposeLines.length > 0 ? 11 : 0);
-  const metaphorStartY =
-    mechanismStartY +
-    mechanismLines.length * 11.5 +
-    (mechanismLines.length > 0 ? 9 : 0);
-
-  return {
-    titleLines,
-    purposeLines,
-    mechanismLines,
-    metaphorLines,
-    purposeStartY,
-    mechanismStartY,
-    metaphorStartY,
-  };
-}
-
-function renderTextLines(
-  lines: string[],
-  x: number,
-  startY: number,
-  lineHeight: number,
-  options: {
-    fill: string;
-    fontSize: number;
-    fontWeight?: number;
-  },
-) {
-  if (lines.length === 0) {
-    return null;
-  }
-
-  return (
-    <text
-      x={x}
-      y={startY}
-      fill={options.fill}
-      fontSize={options.fontSize}
-      fontWeight={options.fontWeight}
-    >
-      {lines.map((line, index) => (
-        <tspan key={`${startY}-${index}`} x={x} dy={index === 0 ? 0 : lineHeight}>
-          {line}
-        </tspan>
-      ))}
-    </text>
-  );
-}
-
-function wrapTextToLines(text: string, maxChars: number, maxLines: number) {
-  const normalized = text.replace(/\s+/g, " ").trim();
-  if (!normalized) {
-    return [];
-  }
-
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let current = "";
-  let truncated = false;
-
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length <= maxChars) {
-      current = candidate;
-      continue;
-    }
-
-    if (current) {
-      lines.push(current);
-      if (lines.length === maxLines) {
-        truncated = true;
-        current = "";
-        break;
-      }
-      current = word;
-      continue;
-    }
-
-    lines.push(word.slice(0, Math.max(1, maxChars - 1)));
-    truncated = true;
-    current = "";
-    if (lines.length === maxLines) {
-      break;
-    }
-  }
-
-  if (current) {
-    if (lines.length < maxLines) {
-      lines.push(current);
-    } else {
-      truncated = true;
-    }
-  }
-
-  if (truncated && lines.length > 0) {
-    lines[lines.length - 1] = ellipsizeLine(lines[lines.length - 1], maxChars);
-  }
-
-  return lines;
-}
-
-function estimateCharacterCapacity(pixelWidth: number, averageCharWidth: number) {
-  return Math.max(12, Math.floor(pixelWidth / averageCharWidth));
 }
 
 function ellipsizeLine(text: string, maxChars: number) {

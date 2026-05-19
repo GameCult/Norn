@@ -673,6 +673,8 @@ export function EpiphanyGraphViewer({
                 const isExpandedSelectedNode = Boolean(expandedNodeMatches && isSelected && expandedNode);
                 const emphasis = nodeOpacity(node, selectedNode, isNeighbor);
                 const metrics = expandedNodeViewportMetrics(node, activeTransform, viewportSize.width, viewportSize.height);
+                const rendersArticle = isExpandedSelectedNode && metrics.article > 0.18;
+                const rendersCompact = !rendersArticle && metrics.preview < 0.08;
                 const className = isExpandedSelectedNode
                   ? ["epiphany-graph-node-surface", expandedNode?.className].filter(Boolean).join(" ")
                   : "epiphany-graph-node-surface";
@@ -682,24 +684,24 @@ export function EpiphanyGraphViewer({
                     key={node.id}
                     aria-label={isExpandedSelectedNode ? expandedNode?.ariaLabel : node.title}
                     className={className}
-                    onClickCapture={isExpandedSelectedNode ? onExpandedNodeClick : undefined}
+                    onClickCapture={rendersArticle ? onExpandedNodeClick : undefined}
                     onPointerDown={(event) => {
-                      if (isExpandedSelectedNode) {
+                      if (rendersArticle) {
                         handleExpandedNodePointerDown(event, expandedNodeScrollRef);
                       }
                     }}
                     onPointerMove={(event) => {
-                      if (isExpandedSelectedNode) {
+                      if (rendersArticle) {
                         handleExpandedNodePointerMove(event, expandedNodeScrollRef);
                       }
                     }}
                     onPointerUp={(event) => {
-                      if (isExpandedSelectedNode) {
+                      if (rendersArticle) {
                         handleExpandedNodePointerUp(event, expandedNodeScrollRef);
                       }
                     }}
                     onPointerCancel={(event) => {
-                      if (isExpandedSelectedNode) {
+                      if (rendersArticle) {
                         handleExpandedNodePointerUp(event, expandedNodeScrollRef);
                       }
                     }}
@@ -751,11 +753,11 @@ export function EpiphanyGraphViewer({
                     data-node-id={node.id}
                     data-node-stage={metrics.stage}
                     style={{
-                      ...nodeSurfaceStyle(node, metrics, emphasis, isSelected, isNeighbor),
-                      cursor: isExpandedSelectedNode ? "grab" : "pointer",
+                      ...nodeSurfaceStyle(node, metrics, emphasis, isSelected, isNeighbor, rendersArticle),
+                      cursor: rendersArticle ? "grab" : "pointer",
                     }}
                   >
-                    {isExpandedSelectedNode ? expandedNode?.content : <DefaultNodeSurface node={node} />}
+                    {rendersArticle ? expandedNode?.content : rendersCompact ? <CompactNodeSurface node={node} /> : <DefaultNodeSurface node={node} />}
                   </div>
                 );
               })}
@@ -1707,17 +1709,19 @@ function nodeSurfaceStyle(
   emphasis: number,
   isSelected: boolean,
   isNeighbor: boolean,
+  rendersArticle: boolean,
 ) {
   const preview = metrics.preview;
   const article = metrics.article;
-  const selectedGlow = isSelected ? 0.42 : isNeighbor ? 0.24 : 0.14;
+  const selectedGlow = isSelected ? 0.28 : isNeighbor ? 0.14 : 0.06;
 
   return {
     position: "absolute",
-    left: metrics.left,
-    top: metrics.top,
+    left: 0,
+    top: 0,
     width: metrics.width,
     height: metrics.height,
+    transform: `translate3d(${metrics.left}px, ${metrics.top}px, 0)`,
     "--node-screen-area-ratio": metrics.areaRatio,
     "--node-focus-proximity": metrics.focusProximity,
     "--node-reveal": metrics.reveal,
@@ -1743,7 +1747,7 @@ function nodeSurfaceStyle(
     display: "block",
     minWidth: 0,
     minHeight: 0,
-    overflow: isSelected && article > 0.2 ? "auto" : "hidden",
+    overflow: rendersArticle ? "auto" : "hidden",
     overscrollBehavior: "contain",
     padding: `var(--node-pad-y) var(--node-pad-x)`,
     borderRadius: metrics.borderRadius,
@@ -1754,11 +1758,12 @@ function nodeSurfaceStyle(
         : node.fill,
     border: `1px solid ${isSelected ? "rgba(186, 230, 253, 0.76)" : node.stroke}`,
     boxShadow:
-      `0 0 0 1px rgba(34, 211, 238, ${selectedGlow}), 0 18px 54px rgba(0, 0, 0, 0.34), 0 0 42px rgba(34, 211, 238, ${selectedGlow})`,
+      isSelected || isNeighbor
+        ? `0 0 0 1px rgba(34, 211, 238, ${selectedGlow}), 0 12px 32px rgba(0, 0, 0, 0.32), 0 0 24px rgba(34, 211, 238, ${selectedGlow})`
+        : "0 0 0 1px rgba(34, 211, 238, 0.06), 0 8px 18px rgba(0, 0, 0, 0.24)",
     opacity: Math.max(0.18, emphasis),
     pointerEvents: "auto",
-    transition:
-      "border-radius 120ms ease, box-shadow 120ms ease, padding 120ms ease, opacity 120ms ease",
+    willChange: rendersArticle ? "auto" : "transform",
   } as CSSProperties & NodeSurfaceCustomProperties;
 }
 
@@ -1784,6 +1789,54 @@ type NodeSurfaceCustomProperties = {
   "--node-article-offset": string;
   "--node-badge-glow": string;
 };
+
+function CompactNodeSurface({ node }: { node: PositionedNode }) {
+  return (
+    <article
+      style={{
+        display: "grid",
+        gridTemplateColumns: "var(--node-badge-size) minmax(0, 1fr)",
+        alignItems: "center",
+        gap: "0.55rem",
+        height: "100%",
+        minWidth: 0,
+        overflow: "hidden",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          display: "grid",
+          width: "var(--node-badge-size)",
+          height: "var(--node-badge-size)",
+          placeItems: "center",
+          borderRadius: 999,
+          background: node.stroke,
+          color: "#071019",
+          fontSize: "calc(var(--node-title-size) * 0.78)",
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        {node.badgeText}
+      </span>
+      <strong
+        style={{
+          display: "block",
+          minWidth: 0,
+          overflow: "hidden",
+          color: "#f7fffb",
+          fontSize: "var(--node-title-size)",
+          lineHeight: 1.05,
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {node.title}
+      </strong>
+    </article>
+  );
+}
 
 function DefaultNodeSurface({ node }: { node: PositionedNode }) {
   return (

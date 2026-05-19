@@ -118,9 +118,9 @@ backdrops that want node-aware effects without owning graph physics.
 
 ## Performance
 
-The viewer is tuned as a realtime machine. Clients choose a speed budget, and the
-viewer adjusts animation frequency, node motion budget, edge refresh rate, and time
-step stability.
+The viewer is tuned as a realtime machine. Clients choose a simulation budget in
+milliseconds, and the viewer measures each step so it can adjust sampled node count
+and edge refresh rate automatically.
 
 ```tsx
 <EpiphanyGraphViewer
@@ -136,7 +136,9 @@ Presets:
 - `balanced`: 40 FPS target, capped node motion, edges refreshed every other step
 - `fast`: 24 FPS target, smaller animated-node budget, edges refreshed every third step
 
-Use explicit knobs when the host app knows its budget:
+Use explicit knobs when the host app knows its budget. `simulationBudgetMs` is the
+authority; the other values are starting ceilings and cadence hints the adaptive loop
+can tighten when frames get expensive.
 
 ```tsx
 <EpiphanyGraphViewer
@@ -144,6 +146,7 @@ Use explicit knobs when the host app knows its budget:
   layoutMode="combined-force"
   performance={{
     preset: "fast",
+    simulationBudgetMs: 2.5,
     targetFps: 30,
     maxAnimatedNodes: 120,
     edgeRefreshRate: 3,

@@ -47,6 +47,12 @@ type DynamicNodeState = {
   vy: number;
 };
 
+type AdaptiveSimulationBudget = {
+  nodeBudget: number;
+  edgeRefreshRate: number;
+  averageCostMs: number;
+};
+
 const PANEL_SURFACE = "rgba(7, 16, 30, 0.76)";
 const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
 
@@ -180,6 +186,10 @@ export function EpiphanyGraphViewer({
     let lastTime = globalThis.performance.now();
     let lastStepTime = lastTime;
     let stepIndex = 0;
+    const adaptiveBudget = createAdaptiveSimulationBudget(
+      layouts[activeGraphKey].nodes.length,
+      performanceOptions,
+    );
     const tick = (time: number) => {
       const minFrameMs = 1000 / performanceOptions.targetFps;
       if (time - lastStepTime < minFrameMs) {
@@ -193,6 +203,7 @@ export function EpiphanyGraphViewer({
         Math.max(0.001, (time - lastTime) / 1000),
       );
       lastTime = time;
+      const stepStart = globalThis.performance.now();
       const next = stepDynamicLayouts({
         baseLayouts: layouts,
         states: dynamicStateRef,
@@ -204,10 +215,16 @@ export function EpiphanyGraphViewer({
         viewportHeight: viewportSize.height,
         dt,
         time: time / 1000,
-        maxAnimatedNodes: performanceOptions.maxAnimatedNodes,
-        refreshEdges: stepIndex % performanceOptions.edgeRefreshRate === 0,
+        maxAnimatedNodes: adaptiveBudget.nodeBudget,
+        refreshEdges: stepIndex % adaptiveBudget.edgeRefreshRate === 0,
         previousLayout: dynamicLayoutRef.current?.[activeGraphKey] ?? null,
       });
+      adjustAdaptiveSimulationBudget(
+        adaptiveBudget,
+        globalThis.performance.now() - stepStart,
+        layouts[activeGraphKey].nodes.length,
+        performanceOptions,
+      );
       if (next) {
         dynamicLayoutRef.current = next.layouts;
         setDynamicLayouts(next.layouts);
@@ -1498,6 +1515,7 @@ function resolvePerformanceOptions(
 
   return {
     preset: overrides.preset ?? base.preset,
+    simulationBudgetMs: clampFiniteNumber(overrides.simulationBudgetMs ?? base.simulationBudgetMs, 0.25, 24),
     targetFps: clampWholeNumber(overrides.targetFps ?? base.targetFps, 1, 60),
     maxAnimatedNodes: clampWholeNumber(overrides.maxAnimatedNodes ?? base.maxAnimatedNodes, 1, 5000),
     edgeRefreshRate: clampWholeNumber(overrides.edgeRefreshRate ?? base.edgeRefreshRate, 1, 12),
@@ -1511,6 +1529,7 @@ function performancePresetDefaults(
   if (preset === "quality") {
     return {
       preset,
+      simulationBudgetMs: 8,
       targetFps: 60,
       maxAnimatedNodes: 5000,
       edgeRefreshRate: 1,
@@ -1521,6 +1540,7 @@ function performancePresetDefaults(
   if (preset === "fast") {
     return {
       preset,
+      simulationBudgetMs: 2.5,
       targetFps: 24,
       maxAnimatedNodes: 90,
       edgeRefreshRate: 3,
@@ -1530,6 +1550,7 @@ function performancePresetDefaults(
 
   return {
     preset,
+    simulationBudgetMs: 4,
     targetFps: 40,
     maxAnimatedNodes: 240,
     edgeRefreshRate: 2,
@@ -1540,6 +1561,7 @@ function performancePresetDefaults(
 function performanceOptionsCacheKey(options: Required<EpiphanyGraphPerformanceOptions>) {
   return [
     options.preset,
+    options.simulationBudgetMs,
     options.targetFps,
     options.maxAnimatedNodes,
     options.edgeRefreshRate,
@@ -1553,6 +1575,58 @@ function clampWholeNumber(value: number, min: number, max: number) {
   }
 
   return Math.round(clamp(value, min, max));
+}
+
+function clampFiniteNumber(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+
+  return clamp(value, min, max);
+}
+
+function createAdaptiveSimulationBudget(
+  nodeCount: number,
+  options: Required<EpiphanyGraphPerformanceOptions>,
+): AdaptiveSimulationBudget {
+  return {
+    nodeBudget: Math.min(nodeCount, options.maxAnimatedNodes),
+    edgeRefreshRate: options.edgeRefreshRate,
+    averageCostMs: options.simulationBudgetMs,
+  };
+}
+
+function adjustAdaptiveSimulationBudget(
+  budget: AdaptiveSimulationBudget,
+  costMs: number,
+  nodeCount: number,
+  options: Required<EpiphanyGraphPerformanceOptions>,
+) {
+  const target = options.simulationBudgetMs;
+  const measuredCost = Math.max(0.01, costMs);
+  budget.averageCostMs = budget.averageCostMs * 0.82 + measuredCost * 0.18;
+
+  if (budget.averageCostMs > target * 1.08) {
+    const ratio = target / budget.averageCostMs;
+    budget.nodeBudget = clampWholeNumber(
+      budget.nodeBudget * clamp(ratio * 0.92, 0.35, 0.9),
+      1,
+      Math.min(nodeCount, options.maxAnimatedNodes),
+    );
+    budget.edgeRefreshRate = clampWholeNumber(budget.edgeRefreshRate + 1, 1, 12);
+    return;
+  }
+
+  if (budget.averageCostMs < target * 0.55) {
+    budget.nodeBudget = clampWholeNumber(
+      budget.nodeBudget * 1.16 + 2,
+      1,
+      Math.min(nodeCount, options.maxAnimatedNodes),
+    );
+    if (budget.averageCostMs < target * 0.35) {
+      budget.edgeRefreshRate = clampWholeNumber(budget.edgeRefreshRate - 1, 1, 12);
+    }
+  }
 }
 
 function sampleCombinedForce(

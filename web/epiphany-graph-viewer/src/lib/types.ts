@@ -58,6 +58,7 @@ export type EpiphanyGraphPerformancePreset = "quality" | "balanced" | "fast";
 
 export interface EpiphanyGraphPerformanceOptions {
   preset?: EpiphanyGraphPerformancePreset;
+  simulationBudgetMs?: number;
   targetFps?: number;
   maxAnimatedNodes?: number;
   edgeRefreshRate?: number;

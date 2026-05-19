@@ -39,7 +39,7 @@ The public viewer API is intentionally coarse:
 
 - `layoutMode`: `layered`, `stress`, `force`, or `combined-force`
 - `motion`: viewer-owned force tuning for combined-force layouts
-- `performance`: `quality`, `balanced`, `fast`, or explicit realtime budget knobs
+- `performance`: `quality`, `balanced`, `fast`, or explicit `simulationBudgetMs` realtime knobs
 - `selection`, `focusSelection`, `expandedNode`, and callbacks for app integration
 - typed state and event payloads
 

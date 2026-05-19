@@ -4,6 +4,10 @@ These benchmarks measure whether a rendered graph helps a vision-capable agent r
 
 This is not a beauty contest. If a candidate looks cool but does not improve correct answers, it is decorative trash in a nice hat.
 
+Scope boundary: the current harness scores static rendered graph truth. It does not
+yet exercise the React viewer's realtime simulation budget, adaptive node sampling,
+or edge refresh heuristics.
+
 ## Local Workflow
 
 Generate a benchmark run:
@@ -85,3 +89,33 @@ Use:
 - `0.0`: wrong, hallucinated, or unsupported by the allowed inputs
 
 Diagnostic probes may have `maxScore` set to `0`. They are useful notes, not leaderboard bait.
+
+## Realtime Budget Harness
+
+The React viewer needs a separate harness before anyone claims extensive realtime
+heuristic tuning.
+
+Current smoke baseline:
+
+```powershell
+cd .\web\epiphany-graph-viewer
+npm run tune:simulation
+```
+
+This writes `benchmarks/realtime/simulation-profile-baseline.json`. It is a baseline
+for the viewer's default meta-heuristic, not a final proof. The corpus is synthetic
+mock-state expansion; useful, but not enough to crown anything.
+
+That harness should measure, for each graph corpus and performance profile:
+
+- requested `simulationBudgetMs`
+- measured simulation step cost distribution
+- adaptive node budget over time
+- edge refresh cadence over time
+- layout-anchor error for sampled and unsampled nodes
+- visual stability during pan, zoom, selection, and graph switching
+
+Ground truth for the realtime layer is the base layout plus the full unconstrained
+simulation sample for the same frame window. Budgeted runs should be scored by how
+closely they approximate that result while staying inside the requested millisecond
+budget.

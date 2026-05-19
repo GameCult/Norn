@@ -22,6 +22,7 @@
     "build:lib": "tsup src/index.ts --format esm,cjs --dts --external react --external react-dom --clean",
     "build:demo": "vite build --outDir dist/demo",
     "typecheck": "tsc --noEmit",
+    "tune:simulation": "node ./scripts/tune-simulation-profile.mjs",
     "preview": "vite preview"
   },
   "peerDependencies": {

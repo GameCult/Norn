@@ -10,6 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { layoutEpiphanyGraphs } from "./layout";
+import { simulationProfilePresets } from "./simulation-profile";
 import type {
   EpiphanyCodeRef,
   EpiphanyGraphLink,
@@ -1529,32 +1530,20 @@ function performancePresetDefaults(
   if (preset === "quality") {
     return {
       preset,
-      simulationBudgetMs: 8,
-      targetFps: 60,
-      maxAnimatedNodes: 5000,
-      edgeRefreshRate: 1,
-      maxTimeStepMs: 34,
+      ...simulationProfilePresets.quality,
     };
   }
 
   if (preset === "fast") {
     return {
       preset,
-      simulationBudgetMs: 2.5,
-      targetFps: 24,
-      maxAnimatedNodes: 90,
-      edgeRefreshRate: 3,
-      maxTimeStepMs: 24,
+      ...simulationProfilePresets.fast,
     };
   }
 
   return {
     preset,
-    simulationBudgetMs: 4,
-    targetFps: 40,
-    maxAnimatedNodes: 240,
-    edgeRefreshRate: 2,
-    maxTimeStepMs: 28,
+    ...simulationProfilePresets.balanced,
   };
 }
 
@@ -1603,13 +1592,14 @@ function adjustAdaptiveSimulationBudget(
   options: Required<EpiphanyGraphPerformanceOptions>,
 ) {
   const target = options.simulationBudgetMs;
+  const profile = simulationProfilePresets[options.preset];
   const measuredCost = Math.max(0.01, costMs);
   budget.averageCostMs = budget.averageCostMs * 0.82 + measuredCost * 0.18;
 
-  if (budget.averageCostMs > target * 1.08) {
+  if (budget.averageCostMs > target * profile.reduceThreshold) {
     const ratio = target / budget.averageCostMs;
     budget.nodeBudget = clampWholeNumber(
-      budget.nodeBudget * clamp(ratio * 0.92, 0.35, 0.9),
+      budget.nodeBudget * clamp(ratio * profile.nodeBudgetCutRatio, 0.35, 0.9),
       1,
       Math.min(nodeCount, options.maxAnimatedNodes),
     );
@@ -1617,9 +1607,9 @@ function adjustAdaptiveSimulationBudget(
     return;
   }
 
-  if (budget.averageCostMs < target * 0.55) {
+  if (budget.averageCostMs < target * profile.expandThreshold) {
     budget.nodeBudget = clampWholeNumber(
-      budget.nodeBudget * 1.16 + 2,
+      budget.nodeBudget * profile.nodeBudgetGrowthRatio + profile.nodeBudgetGrowthAdd,
       1,
       Math.min(nodeCount, options.maxAnimatedNodes),
     );
@@ -1742,7 +1732,7 @@ function stepDynamicLayouts({
   const bounds = nodeAabb(baseLayout.nodes);
   const centerX = baseLayout.width * 0.5;
   const centerY = baseLayout.height * 0.5;
-  const animatedNodeIds = animatedNodeIdSet(baseLayout.nodes, maxAnimatedNodes);
+  const animatedNodeIds = animatedNodeIdSet(baseLayout.nodes, stateLookup, maxAnimatedNodes);
 
   for (const node of baseLayout.nodes) {
     if (animatedNodeIds && !animatedNodeIds.has(node.id)) {
@@ -1817,21 +1807,35 @@ function stepDynamicLayouts({
   };
 }
 
-function animatedNodeIdSet(nodes: PositionedNode[], maxAnimatedNodes: number) {
+function animatedNodeIdSet(
+  nodes: PositionedNode[],
+  stateLookup: Map<string, DynamicNodeState>,
+  maxAnimatedNodes: number,
+) {
   if (nodes.length <= maxAnimatedNodes) {
     return null;
   }
 
   return new Set(
     [...nodes]
-      .sort((left, right) => nodeAnimationScore(right) - nodeAnimationScore(left))
+      .sort((left, right) =>
+        nodeSimulationPriority(right, stateLookup.get(right.id)) -
+        nodeSimulationPriority(left, stateLookup.get(left.id)),
+      )
       .slice(0, maxAnimatedNodes)
       .map((node) => node.id),
   );
 }
 
-function nodeAnimationScore(node: PositionedNode) {
-  return node.degree * 2 + node.linkCount * 3;
+function nodeSimulationPriority(node: PositionedNode, dynamic: DynamicNodeState | undefined) {
+  const graphImportance = node.degree * 2 + node.linkCount * 3;
+  if (!dynamic) {
+    return graphImportance + 1;
+  }
+
+  const homeError = Math.hypot(node.x - dynamic.x, node.y - dynamic.y) / Math.max(1, Math.max(node.width, node.height));
+  const kineticError = Math.hypot(dynamic.vx, dynamic.vy) / 120;
+  return graphImportance + homeError * 6 + kineticError * 4;
 }
 
 function layoutWithDynamicNodes(

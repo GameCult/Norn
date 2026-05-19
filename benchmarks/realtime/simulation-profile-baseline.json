@@ -1,0 +1,245 @@
+{
+  "generatedAtUtc": "2026-05-19T13:48:35.155Z",
+  "description": "Smoke baseline for React viewer realtime simulation profile. Measures local JS simulation cost/error over synthetic expansions of mock Epiphany state.",
+  "method": {
+    "iterations": 180,
+    "warmupIterations": 30,
+    "timestepSeconds": 0.025,
+    "groundTruth": "full sample using all nodes and refreshed edges every step",
+    "score": "Candidates are better when they stay under simulationBudgetMs while reducing layout-anchor error and staying close to the full-sample baseline."
+  },
+  "corpora": [
+    {
+      "id": "mock-1x",
+      "nodeCount": 10,
+      "edgeCount": 10,
+      "fullSample": {
+        "id": "full",
+        "averageCostMs": 0.0128,
+        "p95CostMs": 0.0257,
+        "budgetHitRate": 1,
+        "averageNodeBudget": 10,
+        "anchorError": 9.6281,
+        "baselineError": 0
+      },
+      "candidates": [
+        {
+          "id": "quality",
+          "averageCostMs": 0.0036,
+          "p95CostMs": 0.0038,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 10,
+          "anchorError": 9.6281,
+          "baselineError": 0
+        },
+        {
+          "id": "balanced",
+          "averageCostMs": 0.0042,
+          "p95CostMs": 0.0067,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 10,
+          "anchorError": 9.6281,
+          "baselineError": 0
+        },
+        {
+          "id": "fast",
+          "averageCostMs": 0.0034,
+          "p95CostMs": 0.0038,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 10,
+          "anchorError": 9.6281,
+          "baselineError": 0
+        }
+      ]
+    },
+    {
+      "id": "mock-4x",
+      "nodeCount": 40,
+      "edgeCount": 40,
+      "fullSample": {
+        "id": "full",
+        "averageCostMs": 0.0177,
+        "p95CostMs": 0.0351,
+        "budgetHitRate": 1,
+        "averageNodeBudget": 40,
+        "anchorError": 9.5761,
+        "baselineError": 0
+      },
+      "candidates": [
+        {
+          "id": "quality",
+          "averageCostMs": 0.0258,
+          "p95CostMs": 0.0762,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 40,
+          "anchorError": 9.5761,
+          "baselineError": 0
+        },
+        {
+          "id": "balanced",
+          "averageCostMs": 0.0112,
+          "p95CostMs": 0.0109,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 40,
+          "anchorError": 9.5761,
+          "baselineError": 0
+        },
+        {
+          "id": "fast",
+          "averageCostMs": 0.0126,
+          "p95CostMs": 0.013,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 40,
+          "anchorError": 9.5761,
+          "baselineError": 0
+        }
+      ]
+    },
+    {
+      "id": "mock-12x",
+      "nodeCount": 120,
+      "edgeCount": 120,
+      "fullSample": {
+        "id": "full",
+        "averageCostMs": 0.1851,
+        "p95CostMs": 0.1878,
+        "budgetHitRate": 1,
+        "averageNodeBudget": 120,
+        "anchorError": 9.534,
+        "baselineError": 0
+      },
+      "candidates": [
+        {
+          "id": "quality",
+          "averageCostMs": 0.2182,
+          "p95CostMs": 0.15,
+          "budgetHitRate": 0.9944,
+          "averageNodeBudget": 120,
+          "anchorError": 9.534,
+          "baselineError": 0
+        },
+        {
+          "id": "balanced",
+          "averageCostMs": 0.5637,
+          "p95CostMs": 0.8305,
+          "budgetHitRate": 0.9778,
+          "averageNodeBudget": 109.75,
+          "anchorError": 9.179,
+          "baselineError": 0.6506
+        },
+        {
+          "id": "fast",
+          "averageCostMs": 0.659,
+          "p95CostMs": 1.8007,
+          "budgetHitRate": 0.9778,
+          "averageNodeBudget": 76.8833,
+          "anchorError": 6.6998,
+          "baselineError": 3.0346
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "quality",
+      "budgetHitRate": 0.9981333333333332,
+      "averageCostMs": 0.08253333333333333,
+      "baselineError": 0,
+      "anchorError": 9.5794,
+      "profile": {
+        "id": "quality",
+        "simulationBudgetMs": 8,
+        "targetFps": 60,
+        "maxAnimatedNodes": 5000,
+        "edgeRefreshRate": 1,
+        "maxTimeStepMs": 34,
+        "reduceThreshold": 1.08,
+        "expandThreshold": 0.55,
+        "nodeBudgetCutRatio": 0.92,
+        "nodeBudgetGrowthRatio": 1.16,
+        "nodeBudgetGrowthAdd": 2
+      }
+    },
+    {
+      "id": "balanced",
+      "budgetHitRate": 0.9926,
+      "averageCostMs": 0.1930333333333333,
+      "baselineError": 0.21686666666666665,
+      "anchorError": 9.461066666666667,
+      "profile": {
+        "id": "balanced",
+        "simulationBudgetMs": 4,
+        "targetFps": 40,
+        "maxAnimatedNodes": 240,
+        "edgeRefreshRate": 2,
+        "maxTimeStepMs": 28,
+        "reduceThreshold": 1.08,
+        "expandThreshold": 0.55,
+        "nodeBudgetCutRatio": 0.92,
+        "nodeBudgetGrowthRatio": 1.16,
+        "nodeBudgetGrowthAdd": 2
+      }
+    },
+    {
+      "id": "fast",
+      "budgetHitRate": 0.9926,
+      "averageCostMs": 0.225,
+      "baselineError": 1.0115333333333334,
+      "anchorError": 8.634666666666666,
+      "profile": {
+        "id": "fast",
+        "simulationBudgetMs": 2.5,
+        "targetFps": 24,
+        "maxAnimatedNodes": 90,
+        "edgeRefreshRate": 3,
+        "maxTimeStepMs": 24,
+        "reduceThreshold": 1.08,
+        "expandThreshold": 0.55,
+        "nodeBudgetCutRatio": 0.92,
+        "nodeBudgetGrowthRatio": 1.16,
+        "nodeBudgetGrowthAdd": 2
+      }
+    }
+  ],
+  "recommendation": {
+    "quality": {
+      "id": "quality",
+      "simulationBudgetMs": 8,
+      "targetFps": 60,
+      "maxAnimatedNodes": 5000,
+      "edgeRefreshRate": 1,
+      "maxTimeStepMs": 34,
+      "reduceThreshold": 1.08,
+      "expandThreshold": 0.55,
+      "nodeBudgetCutRatio": 0.92,
+      "nodeBudgetGrowthRatio": 1.16,
+      "nodeBudgetGrowthAdd": 2
+    },
+    "balanced": {
+      "id": "balanced",
+      "simulationBudgetMs": 4,
+      "targetFps": 40,
+      "maxAnimatedNodes": 240,
+      "edgeRefreshRate": 2,
+      "maxTimeStepMs": 28,
+      "reduceThreshold": 1.08,
+      "expandThreshold": 0.55,
+      "nodeBudgetCutRatio": 0.92,
+      "nodeBudgetGrowthRatio": 1.16,
+      "nodeBudgetGrowthAdd": 2
+    },
+    "fast": {
+      "id": "fast",
+      "simulationBudgetMs": 2.5,
+      "targetFps": 24,
+      "maxAnimatedNodes": 90,
+      "edgeRefreshRate": 3,
+      "maxTimeStepMs": 24,
+      "reduceThreshold": 1.08,
+      "expandThreshold": 0.55,
+      "nodeBudgetCutRatio": 0.92,
+      "nodeBudgetGrowthRatio": 1.16,
+      "nodeBudgetGrowthAdd": 2
+    }
+  }
+}

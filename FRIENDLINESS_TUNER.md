@@ -205,6 +205,22 @@ Current command:
 
 The harness renders each candidate, writes blind probe sheets, keeps gold answers separate, and lets a Codex-only review pass score whether the image actually helped recover graph truth.
 
+This harness does not currently validate React viewer realtime simulation budgets.
+When tuning `combined-force`, add a separate budget sweep that compares budgeted
+samples against a full simulation baseline and records whether each run stayed within
+`simulationBudgetMs`. Do not launder static render scores into realtime claims. That
+is how a dashboard learns to lie with posture.
+
+The current smoke path is:
+
+```powershell
+cd .\web\epiphany-graph-viewer
+npm run tune:simulation
+```
+
+It writes `benchmarks/realtime/simulation-profile-baseline.json` and should be treated
+as the floor for the viewer's meta-heuristic, not the ceiling.
+
 Primary metric:
 
 - correct answers to grounded graph probes

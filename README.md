@@ -6,10 +6,10 @@ The live package is `web/epiphany-graph-viewer`. It is what clients and agents
 should reach for when they want to render `architecture`, `dataflow`, and typed
 cross-links in a UI.
 
-The older .NET generator, MSAGL SVG renderer, MCP server, and ELK probe still exist
-as support tools for note exports and layout experiments. They are not competing
-client surfaces. Do not make consumers choose between engines like this repo is a
-sad little trade show booth.
+The older .NET generator, MSAGL SVG renderer, and MCP server still exist as support
+tools for note exports and legacy inspection. They are not competing client surfaces.
+Do not make consumers choose between engines like this repo is a sad little trade
+show booth.
 
 ## React Viewer
 
@@ -210,10 +210,6 @@ That keeps structurally separated note graphs from vanishing just because they n
 
 - `msagl`: the stock MSAGL SVG, useful as the plain baseline
 - `rich`: a custom SVG renderer that consumes MSAGL graph geometry and semantic metadata, then draws something with more visual hierarchy and less beige despair
-
-## ELK Probe
-
-There is also a small web-side `elkjs` probe under `web/elk-probe/`. It inspects which algorithms and options are actually present in the installed `elkjs` build and can relayout existing `source-tree.json` / `control-flow.json` outputs without crossing the C# boundary.
 
 ## Support Tool: Epiphany Graph Viewer Demo
 

@@ -8,7 +8,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          elk: ["elkjs/lib/elk.bundled.js"],
         },
       },
     },

@@ -24,14 +24,12 @@
     "build:solver:wasm": "powershell -ExecutionPolicy Bypass -File ./scripts/Build-RustSolverWasm.ps1",
     "typecheck": "tsc --noEmit",
     "tune:simulation": "node ./scripts/tune-simulation-profile.mjs",
+    "profile:solver": "node ./scripts/profile-rust-solver-performance.mjs",
     "preview": "vite preview"
   },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
-  },
-  "dependencies": {
-    "elkjs": "^0.11.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.2",

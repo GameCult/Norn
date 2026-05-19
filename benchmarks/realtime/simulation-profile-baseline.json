@@ -1,5 +1,5 @@
 {
-  "generatedAtUtc": "2026-05-19T13:48:35.155Z",
+  "generatedAtUtc": "2026-05-19T19:25:01.505Z",
   "description": "Smoke baseline for React viewer realtime simulation profile. Measures local JS simulation cost/error over synthetic expansions of mock Epiphany state.",
   "method": {
     "iterations": 180,
@@ -15,8 +15,8 @@
       "edgeCount": 10,
       "fullSample": {
         "id": "full",
-        "averageCostMs": 0.0128,
-        "p95CostMs": 0.0257,
+        "averageCostMs": 0.0113,
+        "p95CostMs": 0.0186,
         "budgetHitRate": 1,
         "averageNodeBudget": 10,
         "anchorError": 9.6281,
@@ -25,8 +25,8 @@
       "candidates": [
         {
           "id": "quality",
-          "averageCostMs": 0.0036,
-          "p95CostMs": 0.0038,
+          "averageCostMs": 0.0045,
+          "p95CostMs": 0.0049,
           "budgetHitRate": 1,
           "averageNodeBudget": 10,
           "anchorError": 9.6281,
@@ -34,8 +34,8 @@
         },
         {
           "id": "balanced",
-          "averageCostMs": 0.0042,
-          "p95CostMs": 0.0067,
+          "averageCostMs": 0.0037,
+          "p95CostMs": 0.0062,
           "budgetHitRate": 1,
           "averageNodeBudget": 10,
           "anchorError": 9.6281,
@@ -44,7 +44,7 @@
         {
           "id": "fast",
           "averageCostMs": 0.0034,
-          "p95CostMs": 0.0038,
+          "p95CostMs": 0.004,
           "budgetHitRate": 1,
           "averageNodeBudget": 10,
           "anchorError": 9.6281,
@@ -59,7 +59,7 @@
       "fullSample": {
         "id": "full",
         "averageCostMs": 0.0177,
-        "p95CostMs": 0.0351,
+        "p95CostMs": 0.0212,
         "budgetHitRate": 1,
         "averageNodeBudget": 40,
         "anchorError": 9.5761,
@@ -68,8 +68,8 @@
       "candidates": [
         {
           "id": "quality",
-          "averageCostMs": 0.0258,
-          "p95CostMs": 0.0762,
+          "averageCostMs": 0.0134,
+          "p95CostMs": 0.014,
           "budgetHitRate": 1,
           "averageNodeBudget": 40,
           "anchorError": 9.5761,
@@ -77,8 +77,8 @@
         },
         {
           "id": "balanced",
-          "averageCostMs": 0.0112,
-          "p95CostMs": 0.0109,
+          "averageCostMs": 0.0126,
+          "p95CostMs": 0.0116,
           "budgetHitRate": 1,
           "averageNodeBudget": 40,
           "anchorError": 9.5761,
@@ -86,8 +86,8 @@
         },
         {
           "id": "fast",
-          "averageCostMs": 0.0126,
-          "p95CostMs": 0.013,
+          "averageCostMs": 0.0128,
+          "p95CostMs": 0.0171,
           "budgetHitRate": 1,
           "averageNodeBudget": 40,
           "anchorError": 9.5761,
@@ -101,8 +101,8 @@
       "edgeCount": 120,
       "fullSample": {
         "id": "full",
-        "averageCostMs": 0.1851,
-        "p95CostMs": 0.1878,
+        "averageCostMs": 0.0468,
+        "p95CostMs": 0.0435,
         "budgetHitRate": 1,
         "averageNodeBudget": 120,
         "anchorError": 9.534,
@@ -111,30 +111,30 @@
       "candidates": [
         {
           "id": "quality",
-          "averageCostMs": 0.2182,
-          "p95CostMs": 0.15,
-          "budgetHitRate": 0.9944,
+          "averageCostMs": 0.036,
+          "p95CostMs": 0.0723,
+          "budgetHitRate": 1,
           "averageNodeBudget": 120,
           "anchorError": 9.534,
           "baselineError": 0
         },
         {
           "id": "balanced",
-          "averageCostMs": 0.5637,
-          "p95CostMs": 0.8305,
-          "budgetHitRate": 0.9778,
-          "averageNodeBudget": 109.75,
-          "anchorError": 9.179,
-          "baselineError": 0.6506
+          "averageCostMs": 0.0357,
+          "p95CostMs": 0.0521,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 120,
+          "anchorError": 9.534,
+          "baselineError": 0
         },
         {
           "id": "fast",
-          "averageCostMs": 0.659,
-          "p95CostMs": 1.8007,
-          "budgetHitRate": 0.9778,
-          "averageNodeBudget": 76.8833,
-          "anchorError": 6.6998,
-          "baselineError": 3.0346
+          "averageCostMs": 0.195,
+          "p95CostMs": 0.4638,
+          "budgetHitRate": 1,
+          "averageNodeBudget": 90,
+          "anchorError": 7.161,
+          "baselineError": 2.373
         }
       ]
     }
@@ -142,8 +142,8 @@
   "candidates": [
     {
       "id": "quality",
-      "budgetHitRate": 0.9981333333333332,
-      "averageCostMs": 0.08253333333333333,
+      "budgetHitRate": 1,
+      "averageCostMs": 0.017966666666666666,
       "baselineError": 0,
       "anchorError": 9.5794,
       "profile": {
@@ -162,10 +162,10 @@
     },
     {
       "id": "balanced",
-      "budgetHitRate": 0.9926,
-      "averageCostMs": 0.1930333333333333,
-      "baselineError": 0.21686666666666665,
-      "anchorError": 9.461066666666667,
+      "budgetHitRate": 1,
+      "averageCostMs": 0.017333333333333336,
+      "baselineError": 0,
+      "anchorError": 9.5794,
       "profile": {
         "id": "balanced",
         "simulationBudgetMs": 4,
@@ -182,10 +182,10 @@
     },
     {
       "id": "fast",
-      "budgetHitRate": 0.9926,
-      "averageCostMs": 0.225,
-      "baselineError": 1.0115333333333334,
-      "anchorError": 8.634666666666666,
+      "budgetHitRate": 1,
+      "averageCostMs": 0.0704,
+      "baselineError": 0.791,
+      "anchorError": 8.788400000000001,
       "profile": {
         "id": "fast",
         "simulationBudgetMs": 2.5,

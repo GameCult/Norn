@@ -600,7 +600,7 @@ export function EpiphanyGraphViewer({
             <div>Wheel to zoom. Drag the void to pan. Click something interesting and the side panel stops being decorative.</div>
           </div>
 
-          {status === "loading" && <StageMessage tone="#67e8f9">Laying out the graph. ELK is thinking noble thoughts.</StageMessage>}
+          {status === "loading" && <StageMessage tone="#67e8f9">Laying out the graph. Rust solver is taking the hill.</StageMessage>}
           {status === "error" && <StageMessage tone="#fca5a5">{errorMessage ?? "Layout failed."}</StageMessage>}
           {status === "ready" && activeLayout && (
             <svg

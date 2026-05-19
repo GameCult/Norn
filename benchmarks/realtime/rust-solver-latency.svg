@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="460" viewBox="0 0 920 460">
+  <rect width="100%" height="100%" fill="#071019" />
+  <text x="74" y="32" fill="#e5eef8" font-family="Arial, sans-serif" font-size="22" font-weight="700">Rust Solver P95 Latency By Graph Size</text>
+  <line x1="74" y1="390" x2="884" y2="390" stroke="#64748b" />
+  <line x1="74" y1="58" x2="74" y2="390" stroke="#64748b" />
+  <text x="479" y="438" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">nodes</text>
+  <text x="22" y="224" fill="#cbd5e1" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" transform="rotate(-90 22 224)">p95 ms</text>
+  <text x="74" y="412" fill="#94a3b8" font-family="Arial, sans-serif" font-size="12">24</text>
+  <text x="884" y="412" fill="#94a3b8" font-family="Arial, sans-serif" font-size="12" text-anchor="end">1024</text>
+  <text x="64" y="390" fill="#94a3b8" font-family="Arial, sans-serif" font-size="12" text-anchor="end">0</text>
+  <text x="64" y="62" fill="#94a3b8" font-family="Arial, sans-serif" font-size="12" text-anchor="end">212.6332</text>
+  <path d="M 74.00 389.84 L 106.40 389.19 L 158.24 386.69 L 261.92 371.72 L 469.28 333.64 L 884.00 93.57" fill="none" stroke="#22d3ee" stroke-width="3" /><circle cx="74.00" cy="389.84" r="4" fill="#22d3ee" /><circle cx="106.40" cy="389.19" r="4" fill="#22d3ee" /><circle cx="158.24" cy="386.69" r="4" fill="#22d3ee" /><circle cx="261.92" cy="371.72" r="4" fill="#22d3ee" /><circle cx="469.28" cy="333.64" r="4" fill="#22d3ee" /><circle cx="884.00" cy="93.57" r="4" fill="#22d3ee" />
+</svg>

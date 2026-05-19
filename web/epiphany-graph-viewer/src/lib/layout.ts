@@ -1,4 +1,3 @@
-import ELK from "elkjs/lib/elk.bundled.js";
 import { layoutWithRustSolver } from "./solver-wasm";
 import type {
   EpiphanyGraph,
@@ -14,33 +13,7 @@ import type {
   PositionedPoint,
 } from "./types";
 
-const elk = new ELK();
-
-type ElkSection = {
-  startPoint?: { x: number; y: number };
-  endPoint?: { x: number; y: number };
-  bendPoints?: Array<{ x: number; y: number }>;
-};
-
-type ElkLayoutNode = {
-  id: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-};
-
-type ElkLayoutEdge = {
-  id?: string;
-  sections?: ElkSection[];
-};
-
-type ElkLayoutGraph = {
-  width?: number;
-  height?: number;
-  children?: ElkLayoutNode[];
-  edges?: ElkLayoutEdge[];
-};
+type NodeSizingMode = "layered" | "compact";
 
 type LayoutViewport = {
   width: number;
@@ -65,111 +38,6 @@ async function layoutGraph(
   graph: EpiphanyGraph,
   links: EpiphanyGraphLink[],
   mode: EpiphanyGraphLayoutMode = "layered",
-  viewport?: LayoutViewport,
-): Promise<GraphLayout> {
-  try {
-    return await layoutGraphWithRustSolver(graphKey, graph, links, mode, viewport);
-  } catch (error) {
-    console.warn("Epiphany Rust graph solver failed; falling back to ELK.", error);
-  }
-
-  return layoutGraphWithElk(graphKey, graph, links, mode, viewport);
-}
-
-async function layoutGraphWithElk(
-  graphKey: GraphKey,
-  graph: EpiphanyGraph,
-  links: EpiphanyGraphLink[],
-  mode: EpiphanyGraphLayoutMode = "layered",
-  viewport?: LayoutViewport,
-): Promise<GraphLayout> {
-  const algorithm = elkAlgorithmForMode(mode);
-  const nodeDegrees = buildNodeDegrees(graph);
-  const linkCounts = buildLinkCounts(graphKey, links);
-  const nodes = graph.nodes.map((node) => {
-    const size = estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport);
-    return {
-      id: node.id,
-      width: size.width,
-      height: size.height,
-      labels: [{ text: node.title }],
-    };
-  });
-  const edges = graph.edges.map((edge, index) => ({
-    id: resolveEdgeId(edge, index),
-    sources: [edge.source_id],
-    targets: [edge.target_id],
-  }));
-
-  const elkGraph = {
-    id: graphKey,
-    layoutOptions: {
-      "elk.algorithm": algorithm,
-      ...layoutOptionsFor(graphKey, algorithm),
-    },
-    children: nodes,
-    edges,
-  };
-
-  const layout = (await elk.layout(elkGraph)) as ElkLayoutGraph;
-  const childLookup = new Map((layout.children ?? []).map((child) => [child.id, child]));
-
-  const positionedNodes: PositionedNode[] = graph.nodes.map((node) => {
-    const child = childLookup.get(node.id);
-    const degree = nodeDegrees.get(node.id) ?? 0;
-    const linkCount = linkCounts.get(node.id) ?? 0;
-    return {
-      ...node,
-      code_refs: node.code_refs ?? [],
-      graphKey,
-      x: child?.x ?? 0,
-      y: child?.y ?? 0,
-      width: child?.width ?? estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport).width,
-      height: child?.height ?? estimateNodeSize(node, graphKey, algorithm, graph.nodes.length, viewport).height,
-      degree,
-      linkCount,
-      badgeText: nodeBadgeText(node.title),
-      fill: nodeFill(graphKey, node.status),
-      stroke: nodeStroke(graphKey, node.status),
-    };
-  });
-  const separatedNodes = normalizeNodeBounds(resizeNodesForSeparation(positionedNodes, algorithm));
-
-  const layoutEdgeLookup = new Map((layout.edges ?? []).map((edge, index) => [edge.id ?? `edge-${graphKey}-${index}`, edge]));
-  const nodeLookup = new Map(separatedNodes.map((node) => [node.id, node]));
-  const positionedEdges: PositionedEdge[] = graph.edges.map((source, index) => {
-    const resolvedId = resolveEdgeId(source, index);
-    const layoutEdge = layoutEdgeLookup.get(resolvedId);
-    const points = isCompactAlgorithm(algorithm) ? [] : edgeSectionsToPoints(layoutEdge?.sections ?? []);
-    const fallbackPoints = points.length > 0 ? points : straightEdgePoints(source, nodeLookup);
-    return {
-      ...source,
-      id: source.id ?? null,
-      label: source.label ?? null,
-      mechanism: source.mechanism ?? null,
-      code_refs: source.code_refs ?? [],
-      graphKey,
-      resolvedId,
-      points: fallbackPoints,
-      path: pointsToPath(fallbackPoints),
-      midpoint: edgeMidpoint(fallbackPoints),
-    };
-  });
-
-  return {
-    graphKey,
-    width: Math.max(720, layoutBounds(separatedNodes).width, layout.width ?? 720),
-    height: Math.max(520, layoutBounds(separatedNodes).height, layout.height ?? 520),
-    nodes: separatedNodes,
-    edges: positionedEdges,
-  };
-}
-
-async function layoutGraphWithRustSolver(
-  graphKey: GraphKey,
-  graph: EpiphanyGraph,
-  links: EpiphanyGraphLink[],
-  mode: EpiphanyGraphLayoutMode,
   viewport?: LayoutViewport,
 ): Promise<GraphLayout> {
   const sizingAlgorithm = sizingAlgorithmForMode(mode);
@@ -261,20 +129,8 @@ function layoutModeFor(
   return mode[graphKey] ?? "layered";
 }
 
-function elkAlgorithmForMode(mode: EpiphanyGraphLayoutMode) {
-  if (mode === "stress" || mode === "combined-force") {
-    return "org.eclipse.elk.stress";
-  }
-
-  if (mode === "force") {
-    return "org.eclipse.elk.force";
-  }
-
-  return "org.eclipse.elk.layered";
-}
-
-function sizingAlgorithmForMode(mode: EpiphanyGraphLayoutMode) {
-  return mode === "layered" ? "org.eclipse.elk.layered" : "org.eclipse.elk.stress";
+function sizingAlgorithmForMode(mode: EpiphanyGraphLayoutMode): NodeSizingMode {
+  return mode === "layered" ? "layered" : "compact";
 }
 
 function rustSolverConfigFor(graphKey: GraphKey, mode: EpiphanyGraphLayoutMode) {
@@ -336,8 +192,8 @@ function layoutBounds(nodes: PositionedNode[]) {
   };
 }
 
-function resizeNodesForSeparation(nodes: PositionedNode[], algorithm: string): PositionedNode[] {
-  if (!isCompactAlgorithm(algorithm) || nodes.length < 2) {
+function resizeNodesForSeparation(nodes: PositionedNode[], sizingMode: NodeSizingMode): PositionedNode[] {
+  if (!isCompactSizingMode(sizingMode) || nodes.length < 2) {
     return nodes;
   }
 
@@ -458,8 +314,8 @@ function relaxOverlappingNodes(nodes: PositionedNode[]): PositionedNode[] {
   return relaxedNodes;
 }
 
-function isCompactAlgorithm(algorithm: string) {
-  return algorithm === "org.eclipse.elk.stress" || algorithm === "org.eclipse.elk.force";
+function isCompactSizingMode(sizingMode: NodeSizingMode) {
+  return sizingMode === "compact";
 }
 
 function nodeCenter(node: { x: number; y: number; width: number; height: number }) {
@@ -467,51 +323,6 @@ function nodeCenter(node: { x: number; y: number; width: number; height: number 
     x: node.x + node.width / 2,
     y: node.y + node.height / 2,
   };
-}
-
-function layoutOptionsFor(graphKey: GraphKey, algorithm: string): Record<string, string> {
-  if (algorithm === "org.eclipse.elk.stress") {
-    return {
-      "elk.padding": "[top=96,left=96,bottom=96,right=96]",
-      "elk.spacing.nodeNode": graphKey === "architecture" ? "96" : "128",
-      "elk.stress.desiredEdgeLength": graphKey === "architecture" ? "260" : "340",
-      "elk.stress.iterationLimit": graphKey === "architecture" ? "240" : "180",
-      "elk.stress.epsilon": "0.0001",
-    };
-  }
-
-  if (algorithm === "org.eclipse.elk.force") {
-    return {
-      "elk.padding": "[top=96,left=96,bottom=96,right=96]",
-      "elk.spacing.nodeNode": graphKey === "architecture" ? "96" : "132",
-      "elk.force.model": "FRUCHTERMAN_REINGOLD",
-      "elk.force.iterations": graphKey === "architecture" ? "650" : "360",
-      "elk.force.repulsion": graphKey === "architecture" ? "72" : "120",
-      "elk.force.temperature": "0.1",
-      "elk.randomSeed": "17",
-    };
-  }
-
-  return graphKey === "architecture"
-    ? {
-        "elk.direction": "DOWN",
-        "elk.edgeRouting": "SPLINES",
-        "elk.spacing.nodeNode": "48",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "88",
-        "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-        "elk.padding": "[top=40,left=40,bottom=40,right=40]",
-      }
-    : {
-        "elk.direction": "RIGHT",
-        "elk.edgeRouting": "SPLINES",
-        "elk.spacing.nodeNode": "88",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "176",
-        "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-        "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-        "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
-        "elk.layered.unnecessaryBendpoints": "true",
-        "elk.padding": "[top=72,left=84,bottom=72,right=96]",
-      };
 }
 
 function buildNodeDegrees(graph: EpiphanyGraph) {
@@ -543,11 +354,11 @@ function resolveEdgeId(edge: EpiphanyGraphEdge, index: number) {
 function estimateNodeSize(
   node: { title: string; purpose: string; mechanism?: string | null; metaphor?: string | null },
   graphKey: GraphKey,
-  algorithm: string,
+  sizingMode: NodeSizingMode,
   nodeCount: number,
   viewport?: LayoutViewport,
 ) {
-  const compact = algorithm === "org.eclipse.elk.stress" || algorithm === "org.eclipse.elk.force";
+  const compact = isCompactSizingMode(sizingMode);
   const densityScale = compact ? graphDensityScale(nodeCount, viewport) : 1;
   const titleWeight = Math.min(node.title.length, 36);
   const purposeWeight = Math.min(node.purpose.length, 110);
@@ -638,22 +449,6 @@ function estimateCharacterCapacity(pixelWidth: number, averageCharWidth: number)
   return Math.max(12, Math.floor(pixelWidth / averageCharWidth));
 }
 
-function edgeSectionsToPoints(sections: ElkSection[]) {
-  const points: PositionedPoint[] = [];
-  for (const section of sections) {
-    if (section.startPoint) {
-      points.push(section.startPoint);
-    }
-    for (const bendPoint of section.bendPoints ?? []) {
-      points.push(bendPoint);
-    }
-    if (section.endPoint) {
-      points.push(section.endPoint);
-    }
-  }
-  return dedupeSequentialPoints(points);
-}
-
 function straightEdgePoints(
   edge: EpiphanyGraphEdge,
   nodes: Map<string, PositionedNode>,
@@ -693,17 +488,6 @@ function edgeMidpoint(points: PositionedPoint[]) {
   }
   const midIndex = Math.floor(points.length / 2);
   return points[midIndex];
-}
-
-function dedupeSequentialPoints(points: PositionedPoint[]) {
-  const deduped: PositionedPoint[] = [];
-  for (const point of points) {
-    const previous = deduped[deduped.length - 1];
-    if (!previous || previous.x !== point.x || previous.y !== point.y) {
-      deduped.push(point);
-    }
-  }
-  return deduped;
 }
 
 function nodeBadgeText(title: string) {

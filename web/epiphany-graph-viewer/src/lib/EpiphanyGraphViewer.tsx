@@ -820,6 +820,36 @@ export function EpiphanyGraphViewer({
           )}
           {status === "ready" && activeLayout && (
             <div
+              aria-hidden="true"
+              onPointerDown={(event) => {
+                if (event.button !== 0 && !isMiddlePointerEvent(event)) {
+                  return;
+                }
+
+                handleViewportPointerDown(event, activeTransform, dragRef);
+              }}
+              onPointerMove={(event) =>
+                handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms)
+              }
+              onPointerUp={(event) => handleViewportPointerUp(event, dragRef)}
+              onPointerCancel={(event) => handleViewportPointerUp(event, dragRef)}
+              onAuxClick={(event) => {
+                if (isMiddleMouseEvent(event)) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }
+              }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                zIndex: 3,
+                cursor: dragRef.current?.active ? "grabbing" : "grab",
+                touchAction: "none",
+              }}
+            />
+          )}
+          {status === "ready" && activeLayout && (
+            <div
               aria-label={`${labels[activeGraphKey]} node surfaces`}
               style={{
                 position: "absolute",

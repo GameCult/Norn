@@ -58,6 +58,11 @@ type ViewportDragState = {
   startY: number;
 };
 
+type ViewportFlightState = {
+  id: number;
+  frameId: number;
+};
+
 type AdaptiveSimulationBudget = {
   nodeBudget: number;
   edgeRefreshRate: number;
@@ -114,8 +119,10 @@ export function EpiphanyGraphViewer({
     transforms,
   });
   const dragRef = useRef<ViewportDragState | null>(null);
+  const viewportFlightRef = useRef<ViewportFlightState | null>(null);
   const skipSelectionFocusRef = useRef<string | null>(null);
   const focusedSelectionKeyRef = useRef<string | null>(null);
+  const focusedNodeRef = useRef<{ graphKey: GraphKey; node: PositionedNode } | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
@@ -317,6 +324,7 @@ export function EpiphanyGraphViewer({
         return;
       }
 
+      cancelViewportFlight(viewportFlightRef);
       const {
         activeGraphKey: currentGraphKey,
         transforms: currentTransforms,
@@ -345,6 +353,7 @@ export function EpiphanyGraphViewer({
         return;
       }
 
+      cancelViewportFlight(viewportFlightRef);
       const {
         activeGraphKey: currentGraphKey,
         transforms: currentTransforms,
@@ -433,7 +442,13 @@ export function EpiphanyGraphViewer({
     expandedNode.nodeId === selectedNode?.id;
 
   useEffect(() => {
-    if (!activeLayout || !activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
+    if (
+      viewportFlightRef.current ||
+      !activeLayout ||
+      !activeTransform.userMoved ||
+      viewportSize.width <= 0 ||
+      viewportSize.height <= 0
+    ) {
       return;
     }
 
@@ -454,6 +469,7 @@ export function EpiphanyGraphViewer({
     const selectionKey = `${activeGraphKey}:${centeredNode.id}`;
     skipSelectionFocusRef.current = selectionKey;
     focusedSelectionKeyRef.current = selectionKey;
+    focusedNodeRef.current = { graphKey: activeGraphKey, node: centeredNode };
     updateSelection({
       kind: "node",
       graphKey: activeGraphKey,
@@ -486,17 +502,30 @@ export function EpiphanyGraphViewer({
     if (skipSelectionFocusRef.current === selectionKey) {
       skipSelectionFocusRef.current = null;
       focusedSelectionKeyRef.current = selectionKey;
+      focusedNodeRef.current = { graphKey: activeGraphKey, node: selectedNode };
       return;
     }
 
+    const sourceNode =
+      focusedNodeRef.current?.graphKey === activeGraphKey
+        ? focusedNodeRef.current.node
+        : null;
     focusedSelectionKeyRef.current = selectionKey;
-    focusNodeInViewport(
-      selectedNode,
-      activeGraphKey,
-      selectionFocusMode,
-      viewportSize.width,
-      viewportSize.height,
+    startViewportFlight(
+      {
+        graphKey: activeGraphKey,
+        sourceNode,
+        targetNode: selectedNode,
+        mode: selectionFocusMode,
+        viewportWidth: viewportSize.width,
+        viewportHeight: viewportSize.height,
+        startTransform: wheelStateRef.current.transforms[activeGraphKey],
+      },
+      viewportFlightRef,
       setTransforms,
+      () => {
+        focusedNodeRef.current = { graphKey: activeGraphKey, node: selectedNode };
+      },
     );
   }, [
     activeGraphKey,
@@ -849,17 +878,6 @@ export function EpiphanyGraphViewer({
                         graphKey: activeGraphKey,
                         nodeId: node.id,
                       });
-                      skipSelectionFocusRef.current = `${activeGraphKey}:${node.id}`;
-                      if (focusSelection && viewportSize.width > 0 && viewportSize.height > 0) {
-                        focusNodeInViewport(
-                          node,
-                          activeGraphKey,
-                          "article",
-                          viewportSize.width,
-                          viewportSize.height,
-                          setTransforms,
-                        );
-                      }
                     }}
                     onDoubleClick={(event) => {
                       if (isInteractiveArticleTarget(event.target)) {
@@ -871,17 +889,6 @@ export function EpiphanyGraphViewer({
                         graphKey: activeGraphKey,
                         nodeId: node.id,
                       });
-                      skipSelectionFocusRef.current = `${activeGraphKey}:${node.id}`;
-                      if (viewportSize.width > 0 && viewportSize.height > 0) {
-                        focusNodeInViewport(
-                          node,
-                          activeGraphKey,
-                          "article",
-                          viewportSize.width,
-                          viewportSize.height,
-                          setTransforms,
-                        );
-                      }
                     }}
                     data-graph-key={activeGraphKey}
                     data-node-id={node.id}
@@ -2031,25 +2038,163 @@ function formatPoint(value: number) {
   return Number.isFinite(value) ? value.toFixed(2) : "0";
 }
 
-function focusNodeInViewport(
+function startViewportFlight(
+  options: {
+    graphKey: GraphKey;
+    sourceNode: PositionedNode | null;
+    targetNode: PositionedNode;
+    mode: NodeFocusMode;
+    viewportWidth: number;
+    viewportHeight: number;
+    startTransform: ViewTransform;
+  },
+  flightRef: React.MutableRefObject<ViewportFlightState | null>,
+  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  onComplete: () => void,
+) {
+  cancelViewportFlight(flightRef);
+  const flightId = (flightRef.current?.id ?? 0) + 1;
+  const start = options.startTransform;
+  const target = transformForNodeFocus(
+    options.targetNode,
+    options.viewportWidth,
+    options.viewportHeight,
+    options.mode,
+  );
+  const sharedBounds = unionNodeBounds(options.sourceNode ?? options.targetNode, options.targetNode);
+  const waypoint = transformForBounds(
+    sharedBounds,
+    options.viewportWidth,
+    options.viewportHeight,
+  );
+  const startTime = globalThis.performance.now();
+  const durationMs = 1000;
+
+  const step = (time: number) => {
+    if (!flightRef.current || flightRef.current.id !== flightId) {
+      return;
+    }
+
+    const progress = clamp((time - startTime) / durationMs, 0, 1);
+    const next = interpolateViewportFlight(start, waypoint, target, progress);
+    setTransforms((current) => ({
+      ...current,
+      [options.graphKey]: {
+        ...next,
+        userMoved: true,
+      },
+    }));
+
+    if (progress < 1) {
+      flightRef.current.frameId = requestAnimationFrame(step);
+      return;
+    }
+
+    flightRef.current = null;
+    onComplete();
+  };
+
+  flightRef.current = {
+    id: flightId,
+    frameId: requestAnimationFrame(step),
+  };
+}
+
+function cancelViewportFlight(flightRef: React.MutableRefObject<ViewportFlightState | null>) {
+  if (!flightRef.current) {
+    return;
+  }
+
+  cancelAnimationFrame(flightRef.current.frameId);
+  flightRef.current = null;
+}
+
+function transformForNodeFocus(
   node: PositionedNode,
-  graphKey: GraphKey,
-  mode: NodeFocusMode,
   viewportWidth: number,
   viewportHeight: number,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
-) {
+  mode: NodeFocusMode,
+): ViewTransform {
   const targetScale = focusedNodeScale(node, viewportWidth, viewportHeight, mode);
   const center = nodeCenter(node);
-  setTransforms((current) => ({
-    ...current,
-    [graphKey]: {
-      x: viewportWidth / 2 - center.x * targetScale,
-      y: viewportHeight / 2 - center.y * targetScale,
-      scale: targetScale,
+  return {
+    x: viewportWidth / 2 - center.x * targetScale,
+    y: viewportHeight / 2 - center.y * targetScale,
+    scale: targetScale,
+    userMoved: true,
+  };
+}
+
+function transformForBounds(
+  bounds: { x: number; y: number; width: number; height: number },
+  viewportWidth: number,
+  viewportHeight: number,
+): ViewTransform {
+  const padding = Math.max(80, Math.max(bounds.width, bounds.height) * 0.08);
+  const paddedWidth = bounds.width + padding * 2;
+  const paddedHeight = bounds.height + padding * 2;
+  const scale = clamp(
+    Math.min((viewportWidth * 0.78) / Math.max(1, paddedWidth), (viewportHeight * 0.74) / Math.max(1, paddedHeight)),
+    0.28,
+    16,
+  );
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+  return {
+    x: viewportWidth / 2 - centerX * scale,
+    y: viewportHeight / 2 - centerY * scale,
+    scale,
+    userMoved: true,
+  };
+}
+
+function unionNodeBounds(first: PositionedNode, second: PositionedNode) {
+  const minX = Math.min(first.x, second.x);
+  const minY = Math.min(first.y, second.y);
+  const maxX = Math.max(first.x + first.width, second.x + second.width);
+  const maxY = Math.max(first.y + first.height, second.y + second.height);
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
+}
+
+function interpolateViewportFlight(
+  start: ViewTransform,
+  waypoint: ViewTransform,
+  target: ViewTransform,
+  progress: number,
+): ViewTransform {
+  if (progress < 0.5) {
+    const t = progress * 2;
+    return {
+      x: catmullRom(start.x, start.x, waypoint.x, target.x, t),
+      y: catmullRom(start.y, start.y, waypoint.y, target.y, t),
+      scale: catmullRom(start.scale, start.scale, waypoint.scale, target.scale, t),
       userMoved: true,
-    },
-  }));
+    };
+  }
+
+  const t = (progress - 0.5) * 2;
+  return {
+    x: catmullRom(start.x, waypoint.x, target.x, target.x, t),
+    y: catmullRom(start.y, waypoint.y, target.y, target.y, t),
+    scale: catmullRom(start.scale, waypoint.scale, target.scale, target.scale, t),
+    userMoved: true,
+  };
+}
+
+function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return 0.5 * (
+    2 * p1 +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+  );
 }
 
 function focusedNodeScale(

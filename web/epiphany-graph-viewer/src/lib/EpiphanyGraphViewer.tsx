@@ -114,7 +114,7 @@ export function EpiphanyGraphViewer({
     transforms,
   });
   const dragRef = useRef<ViewportDragState | null>(null);
-  const explicitFocusRef = useRef<string | null>(null);
+  const skipSelectionFocusRef = useRef<string | null>(null);
   const focusedSelectionKeyRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
@@ -433,6 +433,47 @@ export function EpiphanyGraphViewer({
     expandedNode.nodeId === selectedNode?.id;
 
   useEffect(() => {
+    if (!activeLayout || !activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+
+    const centeredNode = nodeNearestViewportCenter(
+      activeLayout.nodes,
+      activeTransform,
+      viewportSize.width,
+      viewportSize.height,
+    );
+    const selectedNodeId =
+      selection?.kind === "node" && selection.graphKey === activeGraphKey
+        ? selection.nodeId
+        : null;
+    if (!centeredNode || centeredNode.id === selectedNodeId) {
+      return;
+    }
+
+    const selectionKey = `${activeGraphKey}:${centeredNode.id}`;
+    skipSelectionFocusRef.current = selectionKey;
+    focusedSelectionKeyRef.current = selectionKey;
+    updateSelection({
+      kind: "node",
+      graphKey: activeGraphKey,
+      nodeId: centeredNode.id,
+    });
+  }, [
+    activeGraphKey,
+    activeLayout,
+    activeTransform.x,
+    activeTransform.y,
+    activeTransform.scale,
+    activeTransform.userMoved,
+    selection?.kind,
+    selection?.graphKey,
+    selection?.kind === "node" ? selection.nodeId : null,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
+
+  useEffect(() => {
     if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
@@ -442,8 +483,8 @@ export function EpiphanyGraphViewer({
       return;
     }
 
-    if (explicitFocusRef.current === selectionKey) {
-      explicitFocusRef.current = null;
+    if (skipSelectionFocusRef.current === selectionKey) {
+      skipSelectionFocusRef.current = null;
       focusedSelectionKeyRef.current = selectionKey;
       return;
     }
@@ -808,7 +849,7 @@ export function EpiphanyGraphViewer({
                         graphKey: activeGraphKey,
                         nodeId: node.id,
                       });
-                      explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                      skipSelectionFocusRef.current = `${activeGraphKey}:${node.id}`;
                       if (focusSelection && viewportSize.width > 0 && viewportSize.height > 0) {
                         focusNodeInViewport(
                           node,
@@ -830,7 +871,7 @@ export function EpiphanyGraphViewer({
                         graphKey: activeGraphKey,
                         nodeId: node.id,
                       });
-                      explicitFocusRef.current = `${activeGraphKey}:${node.id}`;
+                      skipSelectionFocusRef.current = `${activeGraphKey}:${node.id}`;
                       if (viewportSize.width > 0 && viewportSize.height > 0) {
                         focusNodeInViewport(
                           node,
@@ -1499,6 +1540,43 @@ function nodeCenter(node: PositionedNode) {
     x: node.x + node.width / 2,
     y: node.y + node.height / 2,
   };
+}
+
+function nodeNearestViewportCenter(
+  nodes: PositionedNode[],
+  transform: ViewTransform,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  if (nodes.length === 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+    return null;
+  }
+
+  const worldCenter = {
+    x: (viewportWidth / 2 - transform.x) / Math.max(0.001, transform.scale),
+    y: (viewportHeight / 2 - transform.y) / Math.max(0.001, transform.scale),
+  };
+  let nearest: PositionedNode | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const node of nodes) {
+    const center = nodeCenter(node);
+    const containsCenter =
+      worldCenter.x >= node.x &&
+      worldCenter.x <= node.x + node.width &&
+      worldCenter.y >= node.y &&
+      worldCenter.y <= node.y + node.height;
+    const distance = containsCenter
+      ? 0
+      : Math.hypot(center.x - worldCenter.x, center.y - worldCenter.y);
+
+    if (distance < nearestDistance) {
+      nearest = node;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
 }
 
 function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {

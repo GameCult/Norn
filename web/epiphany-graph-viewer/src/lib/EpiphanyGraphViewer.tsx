@@ -334,6 +334,35 @@ export function EpiphanyGraphViewer({
   });
 
   useEffect(() => {
+    if (!focusSelection) {
+      return;
+    }
+
+    let frameId = 0;
+    const reconcileViewportFocus = () => {
+      const {
+        activeGraphKey: currentGraphKey,
+        transforms: currentTransforms,
+      } = wheelStateRef.current;
+
+      if (!viewportFlightRef.current) {
+        commitFocusFromViewport(
+          currentGraphKey,
+          currentTransforms[currentGraphKey],
+          undefined,
+          viewportFocusSelectionRef,
+          focusedNodeRef,
+        );
+      }
+
+      frameId = requestAnimationFrame(reconcileViewportFocus);
+    };
+
+    frameId = requestAnimationFrame(reconcileViewportFocus);
+    return () => cancelAnimationFrame(frameId);
+  }, [focusSelection]);
+
+  useEffect(() => {
     const element = viewportRef.current;
     const layout = visibleLayouts?.[activeGraphKey] ?? null;
     if (!element || !layout || viewportSize.width <= 0 || viewportSize.height <= 0) {

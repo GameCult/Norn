@@ -526,12 +526,10 @@ export function EpiphanyGraphViewer({
         <div
           ref={viewportRef}
           onPointerDownCapture={(event) => {
-            if (!isMiddlePointerEvent(event)) {
+            if ((event.button !== 0 && !isMiddlePointerEvent(event)) || isInteractiveArticleTarget(event.target)) {
               return;
             }
 
-            event.preventDefault();
-            event.stopPropagation();
             handleViewportPointerDown(event, activeTransform, dragRef);
           }}
           onPointerMoveCapture={(event) =>
@@ -758,19 +756,7 @@ export function EpiphanyGraphViewer({
                       onExpandedNodeClick?.(event);
                     }}
                     onPointerDown={(event) => {
-                      if (isInteractiveArticleTarget(event.target)) {
-                        return;
-                      }
-                      handleViewportPointerDown(event, activeTransform, dragRef);
-                    }}
-                    onPointerMove={(event) => {
-                      handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms);
-                    }}
-                    onPointerUp={(event) => {
-                      handleViewportPointerUp(event, dragRef);
-                    }}
-                    onPointerCancel={(event) => {
-                      handleViewportPointerUp(event, dragRef);
+                      event.stopPropagation();
                     }}
                     onClick={(event) => {
                       if (dragRef.current?.suppressClick) {

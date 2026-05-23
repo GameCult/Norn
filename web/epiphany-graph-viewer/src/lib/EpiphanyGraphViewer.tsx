@@ -48,6 +48,17 @@ type DynamicNodeState = {
   vy: number;
 };
 
+type ViewportDragState = {
+  active: boolean;
+  pointerId: number;
+  moved: boolean;
+  suppressClick: boolean;
+  originX: number;
+  originY: number;
+  startX: number;
+  startY: number;
+};
+
 type AdaptiveSimulationBudget = {
   nodeBudget: number;
   edgeRefreshRate: number;
@@ -103,24 +114,7 @@ export function EpiphanyGraphViewer({
     activeGraphKey,
     transforms,
   });
-  const dragRef = useRef<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>(null);
-  const expandedNodeScrollRef = useRef<{
-    active: boolean;
-    pointerId: number;
-    moved: boolean;
-    suppressClick: boolean;
-    originX: number;
-    originY: number;
-    scrollLeft: number;
-    scrollTop: number;
-  } | null>(null);
+  const dragRef = useRef<ViewportDragState | null>(null);
   const explicitFocusRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
@@ -616,6 +610,12 @@ export function EpiphanyGraphViewer({
               onPointerUp={(event) => handlePointerUp(event, dragRef)}
               onPointerLeave={(event) => handlePointerUp(event, dragRef)}
               onClick={(event) => {
+                if (dragRef.current?.suppressClick) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  dragRef.current.suppressClick = false;
+                  return;
+                }
                 if (event.target === event.currentTarget) {
                   updateSelection(null);
                 }
@@ -748,37 +748,42 @@ export function EpiphanyGraphViewer({
                         return;
                       }
 
-                      if (expandedNodeScrollRef.current?.suppressClick) {
+                      if (dragRef.current?.suppressClick) {
                         event.preventDefault();
                         event.stopPropagation();
-                        expandedNodeScrollRef.current.suppressClick = false;
+                        dragRef.current.suppressClick = false;
                         return;
                       }
 
                       onExpandedNodeClick?.(event);
                     }}
                     onPointerDown={(event) => {
-                      if (rendersArticle) {
-                        handleExpandedNodePointerDown(event, expandedNodeScrollRef);
+                      if (isInteractiveArticleTarget(event.target)) {
+                        return;
                       }
+                      handleViewportPointerDown(event, activeTransform, dragRef);
                     }}
                     onPointerMove={(event) => {
-                      if (rendersArticle) {
-                        handleExpandedNodePointerMove(event, expandedNodeScrollRef);
-                      }
+                      handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms);
                     }}
                     onPointerUp={(event) => {
-                      if (rendersArticle) {
-                        handleExpandedNodePointerUp(event, expandedNodeScrollRef);
-                      }
+                      handleViewportPointerUp(event, dragRef);
                     }}
                     onPointerCancel={(event) => {
-                      if (rendersArticle) {
-                        handleExpandedNodePointerUp(event, expandedNodeScrollRef);
-                      }
+                      handleViewportPointerUp(event, dragRef);
                     }}
                     onClick={(event) => {
+                      if (dragRef.current?.suppressClick) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        dragRef.current.suppressClick = false;
+                        return;
+                      }
                       if (isInteractiveArticleTarget(event.target)) {
+                        return;
+                      }
+                      if (rendersArticle && isSelected) {
+                        event.stopPropagation();
                         return;
                       }
                       event.stopPropagation();
@@ -792,7 +797,7 @@ export function EpiphanyGraphViewer({
                         focusNodeInViewport(
                           node,
                           activeGraphKey,
-                          "preview",
+                          "article",
                           viewportSize.width,
                           viewportSize.height,
                           setTransforms,
@@ -826,7 +831,7 @@ export function EpiphanyGraphViewer({
                     data-node-stage={metrics.stage}
                     style={{
                       ...nodeSurfaceStyle(node, metrics, emphasis, isSelected, isNeighbor, rendersArticle),
-                      cursor: rendersArticle ? "grab" : "pointer",
+                      cursor: "grab",
                     }}
                   >
                     {rendersArticle ? nodeArticleSurface?.content : rendersCompact ? <CompactNodeSurface node={node} /> : <DefaultNodeSurface node={node} />}
@@ -2303,40 +2308,32 @@ function handleNativeWheel(
 function handlePointerDown(
   event: ReactPointerEvent<SVGSVGElement>,
   transform: ViewTransform,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
   if (event.target !== event.currentTarget) {
+    return;
+  }
+  if (event.button !== 0 && !isMiddlePointerEvent(event)) {
     return;
   }
   dragRef.current = {
     active: true,
     pointerId: event.pointerId,
+    moved: false,
+    suppressClick: false,
     originX: event.clientX,
     originY: event.clientY,
     startX: transform.x,
     startY: transform.y,
   };
+  event.preventDefault();
   event.currentTarget.setPointerCapture(event.pointerId);
 }
 
 function handlePointerMove(
   event: ReactPointerEvent<SVGSVGElement>,
   graphKey: GraphKey,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
 ) {
   if (!dragRef.current?.active) {
@@ -2347,6 +2344,10 @@ function handlePointerMove(
   }
   const deltaX = event.clientX - dragRef.current.originX;
   const deltaY = event.clientY - dragRef.current.originY;
+  if (Math.hypot(deltaX, deltaY) > 3) {
+    dragRef.current.moved = true;
+    dragRef.current.suppressClick = true;
+  }
   setTransforms((existing) => ({
     ...existing,
     [graphKey]: {
@@ -2360,43 +2361,42 @@ function handlePointerMove(
 
 function handlePointerUp(
   event: ReactPointerEvent<SVGSVGElement>,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
-  if (dragRef.current) {
-    if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
-      event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
-    }
-    dragRef.current.active = false;
+  if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) {
+    return;
   }
+
+  if (dragRef.current.moved) {
+    event.preventDefault();
+  }
+
+  if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
+    event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+  }
+  dragRef.current.active = false;
 }
 
 function handleViewportPointerDown(
   event: ReactPointerEvent<HTMLElement>,
   transform: ViewTransform,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
+  if (event.button !== 0 && !isMiddlePointerEvent(event)) {
+    return;
+  }
   dragRef.current = {
     active: true,
     pointerId: event.pointerId,
+    moved: false,
+    suppressClick: false,
     originX: event.clientX,
     originY: event.clientY,
     startX: transform.x,
     startY: transform.y,
   };
+  event.preventDefault();
+  event.stopPropagation();
   event.currentTarget.setPointerCapture(event.pointerId);
 }
 
@@ -2411,14 +2411,7 @@ function isMiddleMouseEvent(event: ReactMouseEvent<HTMLElement>) {
 function handleViewportPointerMove(
   event: ReactPointerEvent<HTMLElement>,
   graphKey: GraphKey,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
 ) {
   if (!dragRef.current?.active || event.pointerId !== dragRef.current.pointerId) {
@@ -2427,6 +2420,12 @@ function handleViewportPointerMove(
 
   const deltaX = event.clientX - dragRef.current.originX;
   const deltaY = event.clientY - dragRef.current.originY;
+  if (Math.hypot(deltaX, deltaY) > 3) {
+    dragRef.current.moved = true;
+    dragRef.current.suppressClick = true;
+  }
+  event.preventDefault();
+  event.stopPropagation();
   setTransforms((existing) => ({
     ...existing,
     [graphKey]: {
@@ -2440,115 +2439,21 @@ function handleViewportPointerMove(
 
 function handleViewportPointerUp(
   event: ReactPointerEvent<HTMLElement>,
-  dragRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    originX: number;
-    originY: number;
-    startX: number;
-    startY: number;
-  } | null>,
+  dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
   if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) {
     return;
+  }
+
+  event.stopPropagation();
+  if (dragRef.current.moved) {
+    event.preventDefault();
   }
 
   if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
     event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
   }
   dragRef.current.active = false;
-}
-
-function handleExpandedNodePointerDown(
-  event: ReactPointerEvent<HTMLElement>,
-  scrollRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    moved: boolean;
-    suppressClick: boolean;
-    originX: number;
-    originY: number;
-    scrollLeft: number;
-    scrollTop: number;
-  } | null>,
-) {
-  if (event.button !== 0 || isInteractiveArticleTarget(event.target)) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  scrollRef.current = {
-    active: true,
-    pointerId: event.pointerId,
-    moved: false,
-    suppressClick: false,
-    originX: event.clientX,
-    originY: event.clientY,
-    scrollLeft: event.currentTarget.scrollLeft,
-    scrollTop: event.currentTarget.scrollTop,
-  };
-  event.currentTarget.setPointerCapture(event.pointerId);
-  event.currentTarget.style.cursor = "grabbing";
-}
-
-function handleExpandedNodePointerMove(
-  event: ReactPointerEvent<HTMLElement>,
-  scrollRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    moved: boolean;
-    suppressClick: boolean;
-    originX: number;
-    originY: number;
-    scrollLeft: number;
-    scrollTop: number;
-  } | null>,
-) {
-  if (!scrollRef.current?.active || event.pointerId !== scrollRef.current.pointerId) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  const deltaX = event.clientX - scrollRef.current.originX;
-  const deltaY = event.clientY - scrollRef.current.originY;
-  if (Math.hypot(deltaX, deltaY) > 3) {
-    scrollRef.current.moved = true;
-    scrollRef.current.suppressClick = true;
-  }
-  event.currentTarget.scrollLeft = scrollRef.current.scrollLeft - deltaX;
-  event.currentTarget.scrollTop = scrollRef.current.scrollTop - deltaY;
-}
-
-function handleExpandedNodePointerUp(
-  event: ReactPointerEvent<HTMLElement>,
-  scrollRef: React.MutableRefObject<{
-    active: boolean;
-    pointerId: number;
-    moved: boolean;
-    suppressClick: boolean;
-    originX: number;
-    originY: number;
-    scrollLeft: number;
-    scrollTop: number;
-  } | null>,
-) {
-  if (!scrollRef.current || event.pointerId !== scrollRef.current.pointerId) {
-    return;
-  }
-
-  event.stopPropagation();
-  if (scrollRef.current.moved) {
-    event.preventDefault();
-    scrollRef.current.suppressClick = true;
-  }
-
-  if (event.currentTarget.hasPointerCapture(scrollRef.current.pointerId)) {
-    event.currentTarget.releasePointerCapture(scrollRef.current.pointerId);
-  }
-  event.currentTarget.style.cursor = "";
-  scrollRef.current.active = false;
 }
 
 function isInteractiveArticleTarget(target: EventTarget) {

@@ -115,11 +115,7 @@ export function EpiphanyGraphViewer({
   });
   const dragRef = useRef<ViewportDragState | null>(null);
   const explicitFocusRef = useRef<string | null>(null);
-  const pendingSelectionFocusRef = useRef<string | null>(null);
-  const lastSelectionKeyRef = useRef<string | null>(null);
   const focusedSelectionKeyRef = useRef<string | null>(null);
-  const followedNodeCenterRef = useRef<{ selectionKey: string; x: number; y: number } | null>(null);
-  const visibleLayoutsRef = useRef<Record<GraphKey, GraphLayout> | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
@@ -182,6 +178,16 @@ export function EpiphanyGraphViewer({
       return;
     }
 
+    const selectedNodeId =
+      selection?.kind === "node" && selection.graphKey === activeGraphKey
+        ? selection.nodeId
+        : null;
+    if (focusSelection && selectedNodeId) {
+      dynamicLayoutRef.current = layouts;
+      setDynamicLayouts(layouts);
+      return;
+    }
+
     let frameId = 0;
     let lastTime = globalThis.performance.now();
     let lastStepTime = lastTime;
@@ -239,6 +245,10 @@ export function EpiphanyGraphViewer({
     motionKey,
     performanceKey,
     transforms,
+    focusSelection,
+    selection?.kind,
+    selection?.graphKey,
+    selection?.kind === "node" ? selection.nodeId : null,
     viewportSize.height,
     viewportSize.width,
   ]);
@@ -267,7 +277,6 @@ export function EpiphanyGraphViewer({
   }, [activeGraphKey, transforms]);
 
   const visibleLayouts = dynamicLayouts ?? layouts;
-  visibleLayoutsRef.current = visibleLayouts;
 
   useEffect(() => {
     const element = viewportRef.current;
@@ -332,7 +341,7 @@ export function EpiphanyGraphViewer({
     }
 
     const onPointerDown = (event: PointerEvent) => {
-      if (!shouldStartViewportDrag(event)) {
+      if (!isInsideViewport(event, element) || !shouldStartViewportDrag(event)) {
         return;
       }
 
@@ -352,15 +361,15 @@ export function EpiphanyGraphViewer({
       handleNativeViewportPointerUp(event, element, dragRef);
     };
 
-    element.addEventListener("pointerdown", onPointerDown, { capture: true });
-    element.addEventListener("pointermove", onPointerMove, { capture: true });
-    element.addEventListener("pointerup", onPointerUp, { capture: true });
-    element.addEventListener("pointercancel", onPointerUp, { capture: true });
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    window.addEventListener("pointermove", onPointerMove, { capture: true });
+    window.addEventListener("pointerup", onPointerUp, { capture: true });
+    window.addEventListener("pointercancel", onPointerUp, { capture: true });
     return () => {
-      element.removeEventListener("pointerdown", onPointerDown, { capture: true });
-      element.removeEventListener("pointermove", onPointerMove, { capture: true });
-      element.removeEventListener("pointerup", onPointerUp, { capture: true });
-      element.removeEventListener("pointercancel", onPointerUp, { capture: true });
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      window.removeEventListener("pointermove", onPointerMove, { capture: true });
+      window.removeEventListener("pointerup", onPointerUp, { capture: true });
+      window.removeEventListener("pointercancel", onPointerUp, { capture: true });
     };
   }, []);
 
@@ -424,93 +433,22 @@ export function EpiphanyGraphViewer({
     expandedNode.nodeId === selectedNode?.id;
 
   useEffect(() => {
-    const selectionKey =
-      selection?.kind === "node" && selection.graphKey === activeGraphKey
-        ? `${activeGraphKey}:${selection.nodeId}`
-        : null;
-
-    if (selectionKey && selectionKey !== lastSelectionKeyRef.current) {
-      if (explicitFocusRef.current !== selectionKey) {
-        pendingSelectionFocusRef.current = selectionKey;
-      }
-      lastSelectionKeyRef.current = selectionKey;
-      followedNodeCenterRef.current = null;
-    } else if (!selectionKey) {
-      lastSelectionKeyRef.current = null;
-      pendingSelectionFocusRef.current = null;
-      followedNodeCenterRef.current = null;
-    }
-  }, [
-    activeGraphKey,
-    selection?.kind,
-    selection?.graphKey,
-    selection?.kind === "node" ? selection.nodeId : null,
-  ]);
-
-  useEffect(() => {
-    if (!activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
-      return;
-    }
-
-    const layout = visibleLayoutsRef.current?.[activeGraphKey] ?? null;
-    if (!layout) {
-      return;
-    }
-
-    const centeredNode = nodeNearestViewportCenter(layout.nodes, activeTransform, viewportSize.width, viewportSize.height);
-    const selectedNodeId = selection?.kind === "node" && selection.graphKey === activeGraphKey ? selection.nodeId : null;
-    const selectedNodeKey = selectedNodeId ? `${activeGraphKey}:${selectedNodeId}` : null;
-    if (!centeredNode || selectedNodeId === centeredNode.id) {
-      return;
-    }
-
-    if (selectedNodeKey && pendingSelectionFocusRef.current === selectedNodeKey) {
-      return;
-    }
-
-    explicitFocusRef.current = `${activeGraphKey}:${centeredNode.id}`;
-    focusedSelectionKeyRef.current = `${activeGraphKey}:${centeredNode.id}`;
-    updateSelection({
-      kind: "node",
-      graphKey: activeGraphKey,
-      nodeId: centeredNode.id,
-    });
-  }, [
-    activeGraphKey,
-    activeTransform.x,
-    activeTransform.y,
-    activeTransform.scale,
-    activeTransform.userMoved,
-    selection?.kind,
-    selection?.graphKey,
-    selection?.kind === "node" ? selection.nodeId : null,
-    viewportSize.height,
-    viewportSize.width,
-  ]);
-
-  useEffect(() => {
     if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
 
     const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
-    const center = nodeCenter(selectedNode);
     if (focusedSelectionKeyRef.current === selectionKey) {
-      followedNodeCenterRef.current ??= { selectionKey, ...center };
       return;
     }
 
     if (explicitFocusRef.current === selectionKey) {
       explicitFocusRef.current = null;
-      pendingSelectionFocusRef.current = null;
       focusedSelectionKeyRef.current = selectionKey;
-      followedNodeCenterRef.current = { selectionKey, ...center };
       return;
     }
 
-    pendingSelectionFocusRef.current = null;
     focusedSelectionKeyRef.current = selectionKey;
-    followedNodeCenterRef.current = { selectionKey, ...center };
     focusNodeInViewport(
       selectedNode,
       activeGraphKey,
@@ -524,50 +462,6 @@ export function EpiphanyGraphViewer({
     focusSelection,
     selectionFocusMode,
     selectedNode?.id,
-    viewportSize.height,
-    viewportSize.width,
-  ]);
-
-  useEffect(() => {
-    if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
-      return;
-    }
-
-    const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
-    if (focusedSelectionKeyRef.current !== selectionKey) {
-      followedNodeCenterRef.current = null;
-      return;
-    }
-
-    const center = nodeCenter(selectedNode);
-    const previous = followedNodeCenterRef.current;
-    if (!previous || previous.selectionKey !== selectionKey) {
-      followedNodeCenterRef.current = { selectionKey, ...center };
-      return;
-    }
-
-    const deltaX = center.x - previous.x;
-    const deltaY = center.y - previous.y;
-    followedNodeCenterRef.current = { selectionKey, ...center };
-    if (Math.hypot(deltaX, deltaY) < 0.001) {
-      return;
-    }
-
-    setTransforms((current) => ({
-      ...current,
-      [activeGraphKey]: {
-        ...current[activeGraphKey],
-        x: current[activeGraphKey].x - deltaX * current[activeGraphKey].scale,
-        y: current[activeGraphKey].y - deltaY * current[activeGraphKey].scale,
-        userMoved: current[activeGraphKey].userMoved,
-      },
-    }));
-  }, [
-    activeGraphKey,
-    focusSelection,
-    selectedNode?.id,
-    selectedNode?.x,
-    selectedNode?.y,
     viewportSize.height,
     viewportSize.width,
   ]);
@@ -1607,43 +1501,6 @@ function nodeCenter(node: PositionedNode) {
   };
 }
 
-function nodeNearestViewportCenter(
-  nodes: PositionedNode[],
-  transform: ViewTransform,
-  viewportWidth: number,
-  viewportHeight: number,
-) {
-  if (nodes.length === 0 || viewportWidth <= 0 || viewportHeight <= 0) {
-    return null;
-  }
-
-  const worldCenter = {
-    x: (viewportWidth / 2 - transform.x) / Math.max(0.001, transform.scale),
-    y: (viewportHeight / 2 - transform.y) / Math.max(0.001, transform.scale),
-  };
-  let nearest: PositionedNode | null = null;
-  let nearestDistance = Number.POSITIVE_INFINITY;
-
-  for (const node of nodes) {
-    const center = nodeCenter(node);
-    const containsCenter =
-      worldCenter.x >= node.x &&
-      worldCenter.x <= node.x + node.width &&
-      worldCenter.y >= node.y &&
-      worldCenter.y <= node.y + node.height;
-    const distance = containsCenter
-      ? 0
-      : Math.hypot(center.x - worldCenter.x, center.y - worldCenter.y);
-
-    if (distance < nearestDistance) {
-      nearest = node;
-      nearestDistance = distance;
-    }
-  }
-
-  return nearest;
-}
-
 function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {
   if (typeof mode === "string") {
     return mode;
@@ -2481,6 +2338,16 @@ function shouldStartViewportDrag(event: PointerEvent) {
   return true;
 }
 
+function isInsideViewport(event: PointerEvent, viewportElement: HTMLElement) {
+  const rect = viewportElement.getBoundingClientRect();
+  return (
+    event.clientX >= rect.left &&
+    event.clientX <= rect.right &&
+    event.clientY >= rect.top &&
+    event.clientY <= rect.bottom
+  );
+}
+
 function handleNativeViewportPointerDown(
   event: PointerEvent,
   viewportElement: HTMLElement,
@@ -2565,6 +2432,13 @@ function isInteractiveArticleTarget(target: EventTarget | null) {
 
 function isArticleContentTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
+    return false;
+  }
+
+  const articleContent = target.closest<HTMLElement>(
+    "[data-epiphany-article-content], .zyphos-spa-article",
+  );
+  if (!articleContent) {
     return false;
   }
 

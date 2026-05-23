@@ -528,9 +528,14 @@ export function EpiphanyGraphViewer({
       viewportFlightRef,
       setTransforms,
       () => {
-        focusedNodeRef.current = { graphKey: activeGraphKey, node: targetNode };
-        focusedSelectionKeyRef.current = navigationKey;
-        skipSelectionFocusRef.current = navigationKey;
+        commitViewportFocusSelection(
+          navigationSelection,
+          targetNode,
+          skipSelectionFocusRef,
+          focusedSelectionKeyRef,
+          focusedNodeRef,
+          updateSelection,
+        );
         activeNavigationKeyRef.current = null;
         onNavigationComplete?.(navigationSelection);
       },

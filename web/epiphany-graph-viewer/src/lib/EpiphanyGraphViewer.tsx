@@ -37,6 +37,8 @@ type ViewTransform = {
   userMoved: boolean;
 };
 
+type CommitViewTransform = (graphKey: GraphKey, transform: ViewTransform) => void;
+
 type NodeFocusMode = "preview" | "article";
 
 type DynamicNodeState = {
@@ -147,6 +149,19 @@ export function EpiphanyGraphViewer({
       setLocalSelection(nextSelection);
     }
     onSelectionChange?.(nextSelection);
+  };
+  const commitViewTransform: CommitViewTransform = (graphKey, transform) => {
+    wheelStateRef.current = {
+      ...wheelStateRef.current,
+      transforms: {
+        ...wheelStateRef.current.transforms,
+        [graphKey]: transform,
+      },
+    };
+    setTransforms((current) => ({
+      ...current,
+      [graphKey]: transform,
+    }));
   };
 
   useEffect(() => {
@@ -364,7 +379,7 @@ export function EpiphanyGraphViewer({
         element,
         currentGraphKey,
         currentTransforms,
-        setTransforms,
+        commitViewTransform,
         viewportFocusSelectionRef,
         skipSelectionFocusRef,
         focusedSelectionKeyRef,
@@ -411,7 +426,7 @@ export function EpiphanyGraphViewer({
         skipSelectionFocusRef,
         focusedSelectionKeyRef,
         focusedNodeRef,
-        setTransforms,
+        commitViewTransform,
       );
     };
 
@@ -536,7 +551,7 @@ export function EpiphanyGraphViewer({
         startTransform: wheelStateRef.current.transforms[activeGraphKey],
       },
       viewportFlightRef,
-      setTransforms,
+      commitViewTransform,
       (finalTransform) => {
         const centeredNode =
           activeLayout
@@ -663,7 +678,7 @@ export function EpiphanyGraphViewer({
         startTransform: wheelStateRef.current.transforms[activeGraphKey],
       },
       viewportFlightRef,
-      setTransforms,
+      commitViewTransform,
       () => {
         focusedNodeRef.current = { graphKey: activeGraphKey, node: selectionNode };
       },
@@ -773,21 +788,21 @@ export function EpiphanyGraphViewer({
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1.18, setTransforms)}>+</ActionButton>
-            <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1 / 1.18, setTransforms)}>-</ActionButton>
+            <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1.18, transforms, commitViewTransform)}>+</ActionButton>
+            <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1 / 1.18, transforms, commitViewTransform)}>-</ActionButton>
             <ActionButton
               onClick={() => {
                 if (!activeLayout || viewportSize.width <= 0 || viewportSize.height <= 0) {
                   return;
                 }
-                setTransforms((current) => ({
-                  ...current,
-                  [activeGraphKey]: fitGraphToViewport(
+                commitViewTransform(
+                  activeGraphKey,
+                  fitGraphToViewport(
                     activeLayout,
                     viewportSize.width,
                     viewportSize.height,
                   ),
-                }));
+                );
               }}
             >
               Reset
@@ -2190,7 +2205,7 @@ function startViewportFlight(
     startTransform: ViewTransform;
   },
   flightRef: React.MutableRefObject<ViewportFlightState | null>,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  commitTransform: CommitViewTransform,
   onComplete: (finalTransform: ViewTransform) => void,
 ) {
   cancelViewportFlight(flightRef);
@@ -2218,13 +2233,10 @@ function startViewportFlight(
 
     const progress = clamp((time - startTime) / durationMs, 0, 1);
     const next = interpolateViewportFlight(start, waypoint, target, progress);
-    setTransforms((current) => ({
-      ...current,
-      [options.graphKey]: {
-        ...next,
-        userMoved: true,
-      },
-    }));
+    commitTransform(options.graphKey, {
+      ...next,
+      userMoved: true,
+    });
 
     if (progress < 1) {
       flightRef.current.frameId = requestAnimationFrame(step);
@@ -2663,7 +2675,7 @@ function handleNativeWheel(
   viewportElement: HTMLElement,
   graphKey: GraphKey,
   transforms: Record<GraphKey, ViewTransform>,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  commitTransform: CommitViewTransform,
   focusSelectionRef: React.MutableRefObject<ViewportFocusSelectionState | null>,
   skipSelectionFocusRef: React.MutableRefObject<string | null>,
   focusedSelectionKeyRef: React.MutableRefObject<string | null>,
@@ -2689,10 +2701,7 @@ function handleNativeWheel(
     userMoved: true,
   };
 
-  setTransforms((existing) => ({
-    ...existing,
-    [graphKey]: nextTransform,
-  }));
+  commitTransform(graphKey, nextTransform);
   updateSelectionFromViewportFocus(
     graphKey,
     nextTransform,
@@ -2760,7 +2769,7 @@ function handleNativeViewportPointerMove(
   skipSelectionFocusRef: React.MutableRefObject<string | null>,
   focusedSelectionKeyRef: React.MutableRefObject<string | null>,
   focusedNodeRef: React.MutableRefObject<{ graphKey: GraphKey; node: PositionedNode } | null>,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  commitTransform: CommitViewTransform,
 ) {
   if (!dragRef.current?.active || event.pointerId !== dragRef.current.pointerId) {
     return;
@@ -2780,10 +2789,7 @@ function handleNativeViewportPointerMove(
     scale: dragRef.current.startScale,
     userMoved: true,
   };
-  setTransforms((existing) => ({
-    ...existing,
-    [graphKey]: nextTransform,
-  }));
+  commitTransform(graphKey, nextTransform);
 
   if (!flightRef.current) {
     updateSelectionFromViewportFocus(
@@ -2924,16 +2930,15 @@ function isArticleContentTarget(target: EventTarget | null) {
 function nudgeZoom(
   graphKey: GraphKey,
   factor: number,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  transforms: Record<GraphKey, ViewTransform>,
+  commitTransform: CommitViewTransform,
 ) {
-  setTransforms((current) => ({
+  const current = transforms[graphKey];
+  commitTransform(graphKey, {
     ...current,
-    [graphKey]: {
-      ...current[graphKey],
-      scale: clamp(current[graphKey].scale * factor, 0.28, 16),
-      userMoved: true,
-    },
-  }));
+    scale: clamp(current.scale * factor, 0.28, 16),
+    userMoved: true,
+  });
 }
 
 function edgeColor(graphKey: GraphKey, isSelected: boolean, isConnected: boolean | null) {

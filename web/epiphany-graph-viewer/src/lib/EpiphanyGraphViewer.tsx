@@ -225,8 +225,6 @@ export function EpiphanyGraphViewer({
         ? selection.nodeId
         : null;
     if (focusSelection && selectedNodeId) {
-      dynamicLayoutRef.current = layouts;
-      setDynamicLayouts(layouts);
       return;
     }
 
@@ -552,6 +550,13 @@ export function EpiphanyGraphViewer({
       focusedNodeRef.current?.graphKey === activeGraphKey
         ? focusedNodeRef.current.node
         : selectedNode;
+
+    commitViewportFocusSelection(
+      focusedSelection,
+      targetNode,
+      focusedNodeRef,
+      updateSelection,
+    );
 
     startViewportFlight(
       {

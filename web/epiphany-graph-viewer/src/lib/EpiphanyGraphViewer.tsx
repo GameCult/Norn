@@ -116,6 +116,8 @@ export function EpiphanyGraphViewer({
   });
   const dragRef = useRef<ViewportDragState | null>(null);
   const explicitFocusRef = useRef<string | null>(null);
+  const pendingSelectionFocusRef = useRef<string | null>(null);
+  const lastSelectionKeyRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
@@ -299,7 +301,7 @@ export function EpiphanyGraphViewer({
     }
 
     const onWheel = (event: WheelEvent) => {
-      if (isArticleContentTarget(event.target)) {
+      if (!event.altKey && isArticleContentTarget(event.target)) {
         return;
       }
 
@@ -380,13 +382,40 @@ export function EpiphanyGraphViewer({
     expandedNode.nodeId === selectedNode?.id;
 
   useEffect(() => {
+    const selectionKey =
+      selection?.kind === "node" && selection.graphKey === activeGraphKey
+        ? `${activeGraphKey}:${selection.nodeId}`
+        : null;
+
+    if (selectionKey && selectionKey !== lastSelectionKeyRef.current) {
+      if (explicitFocusRef.current !== selectionKey) {
+        pendingSelectionFocusRef.current = selectionKey;
+      }
+      lastSelectionKeyRef.current = selectionKey;
+    } else if (!selectionKey) {
+      lastSelectionKeyRef.current = null;
+      pendingSelectionFocusRef.current = null;
+    }
+  }, [
+    activeGraphKey,
+    selection?.kind,
+    selection?.graphKey,
+    selection?.kind === "node" ? selection.nodeId : null,
+  ]);
+
+  useEffect(() => {
     if (!activeLayout || !activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
 
     const centeredNode = nodeNearestViewportCenter(activeLayout.nodes, activeTransform, viewportSize.width, viewportSize.height);
     const selectedNodeId = selection?.kind === "node" && selection.graphKey === activeGraphKey ? selection.nodeId : null;
+    const selectedNodeKey = selectedNodeId ? `${activeGraphKey}:${selectedNodeId}` : null;
     if (!centeredNode || selectedNodeId === centeredNode.id) {
+      return;
+    }
+
+    if (selectedNodeKey && pendingSelectionFocusRef.current === selectedNodeKey) {
       return;
     }
 
@@ -418,9 +447,11 @@ export function EpiphanyGraphViewer({
     const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
     if (explicitFocusRef.current === selectionKey) {
       explicitFocusRef.current = null;
+      pendingSelectionFocusRef.current = null;
       return;
     }
 
+    pendingSelectionFocusRef.current = null;
     focusNodeInViewport(
       selectedNode,
       activeGraphKey,
@@ -561,6 +592,11 @@ export function EpiphanyGraphViewer({
         <div
           ref={viewportRef}
           onPointerDownCapture={(event) => {
+            if (isMiddlePointerEvent(event) || (event.altKey && event.button === 0)) {
+              handleViewportPointerDown(event, activeTransform, dragRef);
+              return;
+            }
+
             if (
               (event.button !== 0 && !isMiddlePointerEvent(event)) ||
               isInteractiveArticleTarget(event.target) ||
@@ -764,6 +800,10 @@ export function EpiphanyGraphViewer({
                     aria-label={nodeArticleSurface?.ariaLabel ?? node.title}
                     className={className}
                     onClickCapture={(event) => {
+                      if (event.altKey) {
+                        return;
+                      }
+
                       if (!rendersArticle) {
                         return;
                       }
@@ -778,7 +818,9 @@ export function EpiphanyGraphViewer({
                       onExpandedNodeClick?.(event);
                     }}
                     onPointerDown={(event) => {
-                      event.stopPropagation();
+                      if (!event.altKey) {
+                        event.stopPropagation();
+                      }
                     }}
                     onClick={(event) => {
                       if (dragRef.current?.suppressClick) {
@@ -2517,7 +2559,7 @@ function isArticleContentTarget(target: EventTarget | null) {
   }
 
   const articleDetail = Number(surface.style.getPropertyValue("--node-article"));
-  return Number.isFinite(articleDetail) && articleDetail > 0.18;
+  return Number.isFinite(articleDetail) && articleDetail >= 0.92;
 }
 
 function nudgeZoom(

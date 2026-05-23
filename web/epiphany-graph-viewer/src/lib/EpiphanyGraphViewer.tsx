@@ -299,6 +299,10 @@ export function EpiphanyGraphViewer({
     }
 
     const onWheel = (event: WheelEvent) => {
+      if (isArticleContentTarget(event.target)) {
+        return;
+      }
+
       const {
         activeGraphKey: currentGraphKey,
         transforms: currentTransforms,
@@ -374,6 +378,37 @@ export function EpiphanyGraphViewer({
     Boolean(selectedNode) &&
     expandedNode?.graphKey === activeGraphKey &&
     expandedNode.nodeId === selectedNode?.id;
+
+  useEffect(() => {
+    if (!activeLayout || !activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+
+    const centeredNode = nodeNearestViewportCenter(activeLayout.nodes, activeTransform, viewportSize.width, viewportSize.height);
+    const selectedNodeId = selection?.kind === "node" && selection.graphKey === activeGraphKey ? selection.nodeId : null;
+    if (!centeredNode || selectedNodeId === centeredNode.id) {
+      return;
+    }
+
+    explicitFocusRef.current = `${activeGraphKey}:${centeredNode.id}`;
+    updateSelection({
+      kind: "node",
+      graphKey: activeGraphKey,
+      nodeId: centeredNode.id,
+    });
+  }, [
+    activeGraphKey,
+    activeLayout,
+    activeTransform.x,
+    activeTransform.y,
+    activeTransform.scale,
+    activeTransform.userMoved,
+    selection?.kind,
+    selection?.graphKey,
+    selection?.kind === "node" ? selection.nodeId : null,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   useEffect(() => {
     if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
@@ -526,7 +561,11 @@ export function EpiphanyGraphViewer({
         <div
           ref={viewportRef}
           onPointerDownCapture={(event) => {
-            if ((event.button !== 0 && !isMiddlePointerEvent(event)) || isInteractiveArticleTarget(event.target)) {
+            if (
+              (event.button !== 0 && !isMiddlePointerEvent(event)) ||
+              isInteractiveArticleTarget(event.target) ||
+              (event.button === 0 && isArticleContentTarget(event.target))
+            ) {
               return;
             }
 
@@ -613,9 +652,6 @@ export function EpiphanyGraphViewer({
                   event.stopPropagation();
                   dragRef.current.suppressClick = false;
                   return;
-                }
-                if (event.target === event.currentTarget) {
-                  updateSelection(null);
                 }
               }}
               style={{ width: "100%", height: "100%", display: "block", cursor: dragRef.current?.active ? "grabbing" : "grab" }}
@@ -803,7 +839,7 @@ export function EpiphanyGraphViewer({
                     data-node-stage={metrics.stage}
                     style={{
                       ...nodeSurfaceStyle(node, metrics, emphasis, isSelected, isNeighbor, rendersArticle),
-                      cursor: "grab",
+                      cursor: rendersArticle ? "auto" : "grab",
                     }}
                   >
                     {rendersArticle ? nodeArticleSurface?.content : rendersCompact ? <CompactNodeSurface node={node} /> : <DefaultNodeSurface node={node} />}
@@ -1457,6 +1493,43 @@ function nodeCenter(node: PositionedNode) {
   };
 }
 
+function nodeNearestViewportCenter(
+  nodes: PositionedNode[],
+  transform: ViewTransform,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  if (nodes.length === 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+    return null;
+  }
+
+  const worldCenter = {
+    x: (viewportWidth / 2 - transform.x) / Math.max(0.001, transform.scale),
+    y: (viewportHeight / 2 - transform.y) / Math.max(0.001, transform.scale),
+  };
+  let nearest: PositionedNode | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const node of nodes) {
+    const center = nodeCenter(node);
+    const containsCenter =
+      worldCenter.x >= node.x &&
+      worldCenter.x <= node.x + node.width &&
+      worldCenter.y >= node.y &&
+      worldCenter.y <= node.y + node.height;
+    const distance = containsCenter
+      ? 0
+      : Math.hypot(center.x - worldCenter.x, center.y - worldCenter.y);
+
+    if (distance < nearestDistance) {
+      nearest = node;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
+}
+
 function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {
   if (typeof mode === "string") {
     return mode;
@@ -2043,6 +2116,7 @@ function nodeSurfaceStyle(
     minHeight: 0,
     overflow: rendersArticle ? "auto" : "hidden",
     overscrollBehavior: "contain",
+    userSelect: rendersArticle ? "text" : "none",
     padding: `var(--node-pad-y) var(--node-pad-x)`,
     borderRadius: metrics.borderRadius,
     color: "#effcf8",
@@ -2430,6 +2504,20 @@ function handleViewportPointerUp(
 
 function isInteractiveArticleTarget(target: EventTarget) {
   return target instanceof Element && Boolean(target.closest("a, button, input, textarea, select, summary, [role='button']"));
+}
+
+function isArticleContentTarget(target: EventTarget) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  const surface = target.closest<HTMLElement>(".epiphany-graph-node-surface");
+  if (!surface) {
+    return false;
+  }
+
+  const articleDetail = Number(surface.style.getPropertyValue("--node-article"));
+  return Number.isFinite(articleDetail) && articleDetail > 0.18;
 }
 
 function nudgeZoom(

@@ -872,7 +872,7 @@ export function EpiphanyGraphViewer({
                     }
                   : null;
                 const nodeArticleSurface = providedArticle?.content ? providedArticle : legacyExpandedNode;
-                const rendersArticle = Boolean(nodeArticleSurface && metrics.article > 0.18);
+                const rendersArticle = Boolean(nodeArticleSurface && isSelected && metrics.article > 0.18);
                 const rendersCompact = !rendersArticle && metrics.preview < 0.08;
                 const className = nodeArticleSurface
                   ? ["epiphany-graph-node-surface", nodeArticleSurface.className].filter(Boolean).join(" ")
@@ -2314,20 +2314,29 @@ function nodeSurfaceStyle(
   isNeighbor: boolean,
   rendersArticle: boolean,
 ) {
-  const preview = metrics.preview;
-  const article = metrics.article;
+  const preview = isSelected ? metrics.preview : 0;
+  const article = isSelected ? metrics.article : 0;
+  const visualGrowth = Math.max(preview, article);
+  const centerX = metrics.layoutLeft + metrics.layoutWidth / 2;
+  const centerY = metrics.layoutTop + metrics.layoutHeight / 2;
+  const compactWidth = Math.min(metrics.layoutWidth, clamp(94 + node.title.length * 7.8, 132, 360));
+  const compactHeight = Math.min(metrics.layoutHeight, 58);
+  const visualWidth = lerp(compactWidth, metrics.layoutWidth, visualGrowth);
+  const visualHeight = lerp(compactHeight, metrics.layoutHeight, visualGrowth);
+  const visualLeft = centerX - visualWidth / 2;
+  const visualTop = centerY - visualHeight / 2;
   const selectedGlow = isSelected ? 0.28 : isNeighbor ? 0.14 : 0.06;
 
   return {
     position: "absolute",
     left: 0,
     top: 0,
-    width: metrics.width,
-    height: metrics.height,
-    transform: `translate3d(${metrics.left}px, ${metrics.top}px, 0)`,
+    width: visualWidth,
+    height: visualHeight,
+    transform: `translate3d(${visualLeft}px, ${visualTop}px, 0)`,
     "--node-screen-area-ratio": metrics.areaRatio,
     "--node-focus-proximity": metrics.focusProximity,
-    "--node-reveal": metrics.reveal,
+    "--node-reveal": isSelected ? metrics.reveal : 0,
     "--node-preview": preview,
     "--node-article": article,
     "--node-compact": 1 - preview,
@@ -2354,7 +2363,7 @@ function nodeSurfaceStyle(
     overscrollBehavior: "contain",
     userSelect: rendersArticle ? "text" : "none",
     padding: `var(--node-pad-y) var(--node-pad-x)`,
-    borderRadius: metrics.borderRadius,
+    borderRadius: lerp(16, 32, article),
     color: "#effcf8",
     background:
       isSelected

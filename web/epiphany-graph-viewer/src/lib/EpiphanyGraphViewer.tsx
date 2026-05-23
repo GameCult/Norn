@@ -118,6 +118,9 @@ export function EpiphanyGraphViewer({
   const explicitFocusRef = useRef<string | null>(null);
   const pendingSelectionFocusRef = useRef<string | null>(null);
   const lastSelectionKeyRef = useRef<string | null>(null);
+  const focusedSelectionKeyRef = useRef<string | null>(null);
+  const followedNodeCenterRef = useRef<{ selectionKey: string; x: number; y: number } | null>(null);
+  const visibleLayoutsRef = useRef<Record<GraphKey, GraphLayout> | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
@@ -265,6 +268,7 @@ export function EpiphanyGraphViewer({
   }, [activeGraphKey, transforms]);
 
   const visibleLayouts = dynamicLayouts ?? layouts;
+  visibleLayoutsRef.current = visibleLayouts;
 
   useEffect(() => {
     const element = viewportRef.current;
@@ -392,9 +396,11 @@ export function EpiphanyGraphViewer({
         pendingSelectionFocusRef.current = selectionKey;
       }
       lastSelectionKeyRef.current = selectionKey;
+      followedNodeCenterRef.current = null;
     } else if (!selectionKey) {
       lastSelectionKeyRef.current = null;
       pendingSelectionFocusRef.current = null;
+      followedNodeCenterRef.current = null;
     }
   }, [
     activeGraphKey,
@@ -404,11 +410,16 @@ export function EpiphanyGraphViewer({
   ]);
 
   useEffect(() => {
-    if (!activeLayout || !activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
+    if (!activeTransform.userMoved || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
 
-    const centeredNode = nodeNearestViewportCenter(activeLayout.nodes, activeTransform, viewportSize.width, viewportSize.height);
+    const layout = visibleLayoutsRef.current?.[activeGraphKey] ?? null;
+    if (!layout) {
+      return;
+    }
+
+    const centeredNode = nodeNearestViewportCenter(layout.nodes, activeTransform, viewportSize.width, viewportSize.height);
     const selectedNodeId = selection?.kind === "node" && selection.graphKey === activeGraphKey ? selection.nodeId : null;
     const selectedNodeKey = selectedNodeId ? `${activeGraphKey}:${selectedNodeId}` : null;
     if (!centeredNode || selectedNodeId === centeredNode.id) {
@@ -420,6 +431,7 @@ export function EpiphanyGraphViewer({
     }
 
     explicitFocusRef.current = `${activeGraphKey}:${centeredNode.id}`;
+    focusedSelectionKeyRef.current = `${activeGraphKey}:${centeredNode.id}`;
     updateSelection({
       kind: "node",
       graphKey: activeGraphKey,
@@ -427,7 +439,6 @@ export function EpiphanyGraphViewer({
     });
   }, [
     activeGraphKey,
-    activeLayout,
     activeTransform.x,
     activeTransform.y,
     activeTransform.scale,
@@ -445,13 +456,23 @@ export function EpiphanyGraphViewer({
     }
 
     const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
+    const center = nodeCenter(selectedNode);
+    if (focusedSelectionKeyRef.current === selectionKey) {
+      followedNodeCenterRef.current ??= { selectionKey, ...center };
+      return;
+    }
+
     if (explicitFocusRef.current === selectionKey) {
       explicitFocusRef.current = null;
       pendingSelectionFocusRef.current = null;
+      focusedSelectionKeyRef.current = selectionKey;
+      followedNodeCenterRef.current = { selectionKey, ...center };
       return;
     }
 
     pendingSelectionFocusRef.current = null;
+    focusedSelectionKeyRef.current = selectionKey;
+    followedNodeCenterRef.current = { selectionKey, ...center };
     focusNodeInViewport(
       selectedNode,
       activeGraphKey,
@@ -464,6 +485,48 @@ export function EpiphanyGraphViewer({
     activeGraphKey,
     focusSelection,
     selectionFocusMode,
+    selectedNode?.id,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
+
+  useEffect(() => {
+    if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
+      return;
+    }
+
+    const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
+    if (focusedSelectionKeyRef.current !== selectionKey) {
+      followedNodeCenterRef.current = null;
+      return;
+    }
+
+    const center = nodeCenter(selectedNode);
+    const previous = followedNodeCenterRef.current;
+    if (!previous || previous.selectionKey !== selectionKey) {
+      followedNodeCenterRef.current = { selectionKey, ...center };
+      return;
+    }
+
+    const deltaX = center.x - previous.x;
+    const deltaY = center.y - previous.y;
+    followedNodeCenterRef.current = { selectionKey, ...center };
+    if (Math.hypot(deltaX, deltaY) < 0.001) {
+      return;
+    }
+
+    setTransforms((current) => ({
+      ...current,
+      [activeGraphKey]: {
+        ...current[activeGraphKey],
+        x: current[activeGraphKey].x - deltaX * current[activeGraphKey].scale,
+        y: current[activeGraphKey].y - deltaY * current[activeGraphKey].scale,
+        userMoved: current[activeGraphKey].userMoved,
+      },
+    }));
+  }, [
+    activeGraphKey,
+    focusSelection,
     selectedNode?.id,
     selectedNode?.x,
     selectedNode?.y,

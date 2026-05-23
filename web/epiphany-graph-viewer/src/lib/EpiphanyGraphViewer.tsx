@@ -56,11 +56,20 @@ type ViewportDragState = {
   originY: number;
   startX: number;
   startY: number;
+  startScale: number;
 };
 
 type ViewportFlightState = {
   id: number;
   frameId: number;
+};
+
+type ViewportFocusSelectionState = {
+  activeGraphKey: GraphKey;
+  layout: GraphLayout | null;
+  selection: ViewerSelection | null;
+  viewportSize: { width: number; height: number };
+  updateSelection: (selection: ViewerSelection | null) => void;
 };
 
 type AdaptiveSimulationBudget = {
@@ -122,6 +131,7 @@ export function EpiphanyGraphViewer({
   });
   const dragRef = useRef<ViewportDragState | null>(null);
   const viewportFlightRef = useRef<ViewportFlightState | null>(null);
+  const viewportFocusSelectionRef = useRef<ViewportFocusSelectionState | null>(null);
   const skipSelectionFocusRef = useRef<string | null>(null);
   const focusedSelectionKeyRef = useRef<string | null>(null);
   const focusedNodeRef = useRef<{ graphKey: GraphKey; node: PositionedNode } | null>(null);
@@ -287,6 +297,18 @@ export function EpiphanyGraphViewer({
   }, [activeGraphKey, transforms]);
 
   const visibleLayouts = dynamicLayouts ?? layouts;
+  const activeLayout = visibleLayouts?.[activeGraphKey] ?? null;
+  const activeTransform = transforms[activeGraphKey];
+
+  useEffect(() => {
+    viewportFocusSelectionRef.current = {
+      activeGraphKey,
+      layout: activeLayout,
+      selection,
+      viewportSize,
+      updateSelection,
+    };
+  });
 
   useEffect(() => {
     const element = viewportRef.current;
@@ -343,6 +365,10 @@ export function EpiphanyGraphViewer({
         currentGraphKey,
         currentTransforms,
         setTransforms,
+        viewportFocusSelectionRef,
+        skipSelectionFocusRef,
+        focusedSelectionKeyRef,
+        focusedNodeRef,
       );
     };
 
@@ -376,7 +402,17 @@ export function EpiphanyGraphViewer({
 
     const onPointerMove = (event: PointerEvent) => {
       const { activeGraphKey: currentGraphKey } = wheelStateRef.current;
-      handleNativeViewportPointerMove(event, currentGraphKey, dragRef, setTransforms);
+      handleNativeViewportPointerMove(
+        event,
+        currentGraphKey,
+        dragRef,
+        viewportFlightRef,
+        viewportFocusSelectionRef,
+        skipSelectionFocusRef,
+        focusedSelectionKeyRef,
+        focusedNodeRef,
+        setTransforms,
+      );
     };
 
     const onPointerUp = (event: PointerEvent) => {
@@ -409,8 +445,6 @@ export function EpiphanyGraphViewer({
     }));
   }, [layouts, viewportSize.height, viewportSize.width]);
 
-  const activeLayout = visibleLayouts?.[activeGraphKey] ?? null;
-  const activeTransform = transforms[activeGraphKey];
   const compactGraph = activeLayout ? isCompactGraphLayout(activeLayout) : false;
   const selectedNode =
     selection?.kind === "node" && selection.graphKey === activeGraphKey && activeLayout
@@ -540,15 +574,18 @@ export function EpiphanyGraphViewer({
       return;
     }
 
-    const selectionKey = `${activeGraphKey}:${centeredNode.id}`;
-    skipSelectionFocusRef.current = selectionKey;
-    focusedSelectionKeyRef.current = selectionKey;
-    focusedNodeRef.current = { graphKey: activeGraphKey, node: centeredNode };
-    updateSelection({
-      kind: "node",
-      graphKey: activeGraphKey,
-      nodeId: centeredNode.id,
-    });
+    commitViewportFocusSelection(
+      {
+        kind: "node",
+        graphKey: activeGraphKey,
+        nodeId: centeredNode.id,
+      },
+      centeredNode,
+      skipSelectionFocusRef,
+      focusedSelectionKeyRef,
+      focusedNodeRef,
+      updateSelection,
+    );
   }, [
     activeGraphKey,
     activeLayout,
@@ -2594,6 +2631,10 @@ function handleNativeWheel(
   graphKey: GraphKey,
   transforms: Record<GraphKey, ViewTransform>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
+  focusSelectionRef: React.MutableRefObject<ViewportFocusSelectionState | null>,
+  skipSelectionFocusRef: React.MutableRefObject<string | null>,
+  focusedSelectionKeyRef: React.MutableRefObject<string | null>,
+  focusedNodeRef: React.MutableRefObject<{ graphKey: GraphKey; node: PositionedNode } | null>,
 ) {
   event.preventDefault();
   event.stopPropagation();
@@ -2608,15 +2649,25 @@ function handleNativeWheel(
   const nextX = cursorX - worldX * nextScale;
   const nextY = cursorY - worldY * nextScale;
 
+  const nextTransform = {
+    x: nextX,
+    y: nextY,
+    scale: nextScale,
+    userMoved: true,
+  };
+
   setTransforms((existing) => ({
     ...existing,
-    [graphKey]: {
-      x: nextX,
-      y: nextY,
-      scale: nextScale,
-      userMoved: true,
-    },
+    [graphKey]: nextTransform,
   }));
+  updateSelectionFromViewportFocus(
+    graphKey,
+    nextTransform,
+    focusSelectionRef,
+    skipSelectionFocusRef,
+    focusedSelectionKeyRef,
+    focusedNodeRef,
+  );
 }
 
 function shouldStartViewportDrag(event: PointerEvent) {
@@ -2660,6 +2711,7 @@ function handleNativeViewportPointerDown(
     originY: event.clientY,
     startX: transform.x,
     startY: transform.y,
+    startScale: transform.scale,
   };
   event.preventDefault();
   event.stopPropagation();
@@ -2670,6 +2722,11 @@ function handleNativeViewportPointerMove(
   event: PointerEvent,
   graphKey: GraphKey,
   dragRef: React.MutableRefObject<ViewportDragState | null>,
+  flightRef: React.MutableRefObject<ViewportFlightState | null>,
+  focusSelectionRef: React.MutableRefObject<ViewportFocusSelectionState | null>,
+  skipSelectionFocusRef: React.MutableRefObject<string | null>,
+  focusedSelectionKeyRef: React.MutableRefObject<string | null>,
+  focusedNodeRef: React.MutableRefObject<{ graphKey: GraphKey; node: PositionedNode } | null>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
 ) {
   if (!dragRef.current?.active || event.pointerId !== dragRef.current.pointerId) {
@@ -2684,15 +2741,98 @@ function handleNativeViewportPointerMove(
   }
   event.preventDefault();
   event.stopPropagation();
+  const nextTransform = {
+    x: dragRef.current.startX + deltaX,
+    y: dragRef.current.startY + deltaY,
+    scale: dragRef.current.startScale,
+    userMoved: true,
+  };
   setTransforms((existing) => ({
     ...existing,
-    [graphKey]: {
-      ...existing[graphKey],
-      x: dragRef.current!.startX + deltaX,
-      y: dragRef.current!.startY + deltaY,
-      userMoved: true,
-    },
+    [graphKey]: nextTransform,
   }));
+
+  if (!flightRef.current) {
+    updateSelectionFromViewportFocus(
+      graphKey,
+      nextTransform,
+      focusSelectionRef,
+      skipSelectionFocusRef,
+      focusedSelectionKeyRef,
+      focusedNodeRef,
+    );
+  }
+}
+
+function updateSelectionFromViewportFocus(
+  graphKey: GraphKey,
+  transform: ViewTransform,
+  focusSelectionRef: React.MutableRefObject<ViewportFocusSelectionState | null>,
+  skipSelectionFocusRef: React.MutableRefObject<string | null>,
+  focusedSelectionKeyRef: React.MutableRefObject<string | null>,
+  focusedNodeRef: React.MutableRefObject<{ graphKey: GraphKey; node: PositionedNode } | null>,
+) {
+  const state = focusSelectionRef.current;
+  if (
+    !state ||
+    state.activeGraphKey !== graphKey ||
+    !state.layout ||
+    state.viewportSize.width <= 0 ||
+    state.viewportSize.height <= 0
+  ) {
+    return;
+  }
+
+  const centeredNode = nodeNearestViewportCenter(
+    state.layout.nodes,
+    transform,
+    state.viewportSize.width,
+    state.viewportSize.height,
+  );
+  const selectedNodeId =
+    state.selection?.kind === "node" && state.selection.graphKey === graphKey
+      ? state.selection.nodeId
+      : null;
+  if (!centeredNode || centeredNode.id === selectedNodeId) {
+    return;
+  }
+
+  const selectionKey = `${graphKey}:${centeredNode.id}`;
+  if (focusedSelectionKeyRef.current === selectionKey) {
+    return;
+  }
+
+  commitViewportFocusSelection(
+    {
+      kind: "node",
+      graphKey,
+      nodeId: centeredNode.id,
+    },
+    centeredNode,
+    skipSelectionFocusRef,
+    focusedSelectionKeyRef,
+    focusedNodeRef,
+    state.updateSelection,
+  );
+}
+
+function commitViewportFocusSelection(
+  selection: ViewerSelection,
+  node: PositionedNode,
+  skipSelectionFocusRef: React.MutableRefObject<string | null>,
+  focusedSelectionKeyRef: React.MutableRefObject<string | null>,
+  focusedNodeRef: React.MutableRefObject<{ graphKey: GraphKey; node: PositionedNode } | null>,
+  updateSelection: (selection: ViewerSelection | null) => void,
+) {
+  if (selection.kind !== "node") {
+    return;
+  }
+
+  const selectionKey = `${selection.graphKey}:${selection.nodeId}`;
+  skipSelectionFocusRef.current = selectionKey;
+  focusedSelectionKeyRef.current = selectionKey;
+  focusedNodeRef.current = { graphKey: selection.graphKey, node };
+  updateSelection(selection);
 }
 
 function handleNativeViewportPointerUp(

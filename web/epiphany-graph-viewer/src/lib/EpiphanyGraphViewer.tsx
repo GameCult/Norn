@@ -637,21 +637,7 @@ export function EpiphanyGraphViewer({
                     selectedNode &&
                     (edge.source_id === selectedNode.id || edge.target_id === selectedNode.id);
                   return (
-                    <g key={edge.resolvedId}>
-                      <path
-                        d={edge.path}
-                        fill="none"
-                        stroke="transparent"
-                        strokeWidth={18}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          updateSelection({
-                            kind: "edge",
-                            graphKey: activeGraphKey,
-                            edgeId: edge.resolvedId,
-                          });
-                        }}
-                      />
+                    <g key={edge.resolvedId} pointerEvents="none">
                       <path
                         d={edge.path}
                         fill="none"

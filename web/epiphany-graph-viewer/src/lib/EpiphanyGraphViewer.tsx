@@ -2446,7 +2446,7 @@ function handleViewportPointerDown(
   event.currentTarget.setPointerCapture(event.pointerId);
 }
 
-function isMiddlePointerEvent(event: ReactPointerEvent<HTMLElement | SVGSVGElement>) {
+function isMiddlePointerEvent(event: ReactPointerEvent<HTMLElement>) {
   return event.button === 1 || (event.buttons & 4) === 4;
 }
 
@@ -2506,7 +2506,7 @@ function isInteractiveArticleTarget(target: EventTarget) {
   return target instanceof Element && Boolean(target.closest("a, button, input, textarea, select, summary, [role='button']"));
 }
 
-function isArticleContentTarget(target: EventTarget | null) {
+function isArticleContentTarget(target: EventTarget) {
   if (!(target instanceof Element)) {
     return false;
   }

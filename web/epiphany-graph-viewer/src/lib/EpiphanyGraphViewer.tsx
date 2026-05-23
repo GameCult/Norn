@@ -527,17 +527,32 @@ export function EpiphanyGraphViewer({
       },
       viewportFlightRef,
       setTransforms,
-      () => {
+      (finalTransform) => {
+        const centeredNode =
+          activeLayout
+            ? nodeNearestViewportCenter(
+                activeLayout.nodes,
+                finalTransform,
+                viewportSize.width,
+                viewportSize.height,
+              )
+            : targetNode;
+        const focusedNode = centeredNode ?? targetNode;
+        const focusedSelection: ViewerSelection = {
+          kind: "node",
+          graphKey: activeGraphKey,
+          nodeId: focusedNode.id,
+        };
         commitViewportFocusSelection(
-          navigationSelection,
-          targetNode,
+          focusedSelection,
+          focusedNode,
           skipSelectionFocusRef,
           focusedSelectionKeyRef,
           focusedNodeRef,
           updateSelection,
         );
         activeNavigationKeyRef.current = null;
-        onNavigationComplete?.(navigationSelection);
+        onNavigationComplete?.(focusedSelection);
       },
     );
   }, [
@@ -2166,7 +2181,7 @@ function startViewportFlight(
   },
   flightRef: React.MutableRefObject<ViewportFlightState | null>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
-  onComplete: () => void,
+  onComplete: (finalTransform: ViewTransform) => void,
 ) {
   cancelViewportFlight(flightRef);
   const flightId = (flightRef.current?.id ?? 0) + 1;
@@ -2207,7 +2222,10 @@ function startViewportFlight(
     }
 
     flightRef.current = null;
-    onComplete();
+    onComplete({
+      ...target,
+      userMoved: true,
+    });
   };
 
   flightRef.current = {

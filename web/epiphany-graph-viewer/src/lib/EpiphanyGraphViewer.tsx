@@ -101,11 +101,11 @@ export function EpiphanyGraphViewer({
   viewportBackground,
   focusSelection = false,
   selectionFocusMode = "preview",
-  navigationSelection,
+  viewportTarget,
   expandedNode,
   nodeArticle,
   onExpandedNodeClick,
-  onNavigationComplete,
+  onViewportTargetComplete,
   onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
@@ -446,10 +446,20 @@ export function EpiphanyGraphViewer({
   }, [layouts, viewportSize.height, viewportSize.width]);
 
   const compactGraph = activeLayout ? isCompactGraphLayout(activeLayout) : false;
-  const selectedNode =
+  const selectionNode =
     selection?.kind === "node" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.nodes.find((node) => node.id === selection.nodeId) ?? null
       : null;
+  const viewportFocusedNode =
+    focusSelection && activeLayout && viewportSize.width > 0 && viewportSize.height > 0
+      ? nodeNearestViewportCenter(
+          activeLayout.nodes,
+          activeTransform,
+          viewportSize.width,
+          viewportSize.height,
+        )
+      : null;
+  const selectedNode = focusSelection ? viewportFocusedNode ?? selectionNode : selectionNode;
   const selectedEdge =
     selection?.kind === "edge" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.edges.find((edge) => edge.resolvedId === selection.edgeId) ?? null
@@ -494,18 +504,18 @@ export function EpiphanyGraphViewer({
       !activeLayout ||
       viewportSize.width <= 0 ||
       viewportSize.height <= 0 ||
-      navigationSelection?.kind !== "node" ||
-      navigationSelection.graphKey !== activeGraphKey
+      viewportTarget?.kind !== "node" ||
+      viewportTarget.graphKey !== activeGraphKey
     ) {
       return;
     }
 
-    const navigationKey = `${navigationSelection.graphKey}:${navigationSelection.nodeId}`;
+    const navigationKey = `${viewportTarget.graphKey}:${viewportTarget.nodeId}`;
     if (viewportFlightRef.current || activeNavigationKeyRef.current === navigationKey) {
       return;
     }
 
-    const targetNode = activeLayout.nodes.find((node) => node.id === navigationSelection.nodeId);
+    const targetNode = activeLayout.nodes.find((node) => node.id === viewportTarget.nodeId);
     if (!targetNode) {
       return;
     }
@@ -552,17 +562,17 @@ export function EpiphanyGraphViewer({
           updateSelection,
         );
         activeNavigationKeyRef.current = null;
-        onNavigationComplete?.(focusedSelection);
+        onViewportTargetComplete?.(focusedSelection);
       },
     );
   }, [
     activeGraphKey,
     activeLayout,
     focusSelection,
-    navigationSelection?.kind,
-    navigationSelection?.graphKey,
-    navigationSelection?.kind === "node" ? navigationSelection.nodeId : null,
-    onNavigationComplete,
+    viewportTarget?.kind,
+    viewportTarget?.graphKey,
+    viewportTarget?.kind === "node" ? viewportTarget.nodeId : null,
+    onViewportTargetComplete,
     selectedNode,
     selectionFocusMode,
     viewportSize.height,
@@ -621,11 +631,11 @@ export function EpiphanyGraphViewer({
   ]);
 
   useEffect(() => {
-    if (!focusSelection || !selectedNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
+    if (!focusSelection || !selectionNode || viewportSize.width <= 0 || viewportSize.height <= 0) {
       return;
     }
 
-    const selectionKey = `${activeGraphKey}:${selectedNode.id}`;
+    const selectionKey = `${activeGraphKey}:${selectionNode.id}`;
     if (focusedSelectionKeyRef.current === selectionKey) {
       return;
     }
@@ -633,7 +643,7 @@ export function EpiphanyGraphViewer({
     if (skipSelectionFocusRef.current === selectionKey) {
       skipSelectionFocusRef.current = null;
       focusedSelectionKeyRef.current = selectionKey;
-      focusedNodeRef.current = { graphKey: activeGraphKey, node: selectedNode };
+      focusedNodeRef.current = { graphKey: activeGraphKey, node: selectionNode };
       return;
     }
 
@@ -646,7 +656,7 @@ export function EpiphanyGraphViewer({
       {
         graphKey: activeGraphKey,
         sourceNode,
-        targetNode: selectedNode,
+        targetNode: selectionNode,
         mode: selectionFocusMode,
         viewportWidth: viewportSize.width,
         viewportHeight: viewportSize.height,
@@ -655,14 +665,14 @@ export function EpiphanyGraphViewer({
       viewportFlightRef,
       setTransforms,
       () => {
-        focusedNodeRef.current = { graphKey: activeGraphKey, node: selectedNode };
+        focusedNodeRef.current = { graphKey: activeGraphKey, node: selectionNode };
       },
     );
   }, [
     activeGraphKey,
     focusSelection,
     selectionFocusMode,
-    selectedNode?.id,
+    selectionNode?.id,
     viewportSize.height,
     viewportSize.width,
   ]);

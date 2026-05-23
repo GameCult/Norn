@@ -7,7 +7,6 @@ import {
   type CSSProperties,
   type ReactNode,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { layoutEpiphanyGraphs } from "./layout";
 import { simulationProfilePresets } from "./simulation-profile";
@@ -324,6 +323,45 @@ export function EpiphanyGraphViewer({
 
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
+  }, []);
+
+  useEffect(() => {
+    const element = viewportRef.current;
+    if (!element) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!shouldStartViewportDrag(event)) {
+        return;
+      }
+
+      const {
+        activeGraphKey: currentGraphKey,
+        transforms: currentTransforms,
+      } = wheelStateRef.current;
+      handleNativeViewportPointerDown(event, element, currentTransforms[currentGraphKey], dragRef);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const { activeGraphKey: currentGraphKey } = wheelStateRef.current;
+      handleNativeViewportPointerMove(event, currentGraphKey, dragRef, setTransforms);
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      handleNativeViewportPointerUp(event, element, dragRef);
+    };
+
+    element.addEventListener("pointerdown", onPointerDown, { capture: true });
+    element.addEventListener("pointermove", onPointerMove, { capture: true });
+    element.addEventListener("pointerup", onPointerUp, { capture: true });
+    element.addEventListener("pointercancel", onPointerUp, { capture: true });
+    return () => {
+      element.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      element.removeEventListener("pointermove", onPointerMove, { capture: true });
+      element.removeEventListener("pointerup", onPointerUp, { capture: true });
+      element.removeEventListener("pointercancel", onPointerUp, { capture: true });
+    };
   }, []);
 
   useEffect(() => {
@@ -654,27 +692,6 @@ export function EpiphanyGraphViewer({
 
         <div
           ref={viewportRef}
-          onPointerDownCapture={(event) => {
-            if (isMiddlePointerEvent(event) || (event.altKey && event.button === 0)) {
-              handleViewportPointerDown(event, activeTransform, dragRef);
-              return;
-            }
-
-            if (
-              (event.button !== 0 && !isMiddlePointerEvent(event)) ||
-              isInteractiveArticleTarget(event.target) ||
-              (event.button === 0 && isArticleContentTarget(event.target))
-            ) {
-              return;
-            }
-
-            handleViewportPointerDown(event, activeTransform, dragRef);
-          }}
-          onPointerMoveCapture={(event) =>
-            handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms)
-          }
-          onPointerUpCapture={(event) => handleViewportPointerUp(event, dragRef)}
-          onPointerCancelCapture={(event) => handleViewportPointerUp(event, dragRef)}
           onAuxClickCapture={(event) => {
             if (isMiddleMouseEvent(event)) {
               event.preventDefault();
@@ -737,14 +754,6 @@ export function EpiphanyGraphViewer({
               width="100%"
               height="100%"
               viewBox={`0 0 ${viewportSize.width || 1} ${viewportSize.height || 1}`}
-              onPointerDown={(event) =>
-                handlePointerDown(event, activeTransform, dragRef)
-              }
-              onPointerMove={(event) =>
-                handlePointerMove(event, activeGraphKey, dragRef, setTransforms)
-              }
-              onPointerUp={(event) => handlePointerUp(event, dragRef)}
-              onPointerLeave={(event) => handlePointerUp(event, dragRef)}
               onClick={(event) => {
                 if (dragRef.current?.suppressClick) {
                   event.preventDefault();
@@ -817,36 +826,6 @@ export function EpiphanyGraphViewer({
 
               </g>
             </svg>
-          )}
-          {status === "ready" && activeLayout && (
-            <div
-              aria-hidden="true"
-              onPointerDown={(event) => {
-                if (event.button !== 0 && !isMiddlePointerEvent(event)) {
-                  return;
-                }
-
-                handleViewportPointerDown(event, activeTransform, dragRef);
-              }}
-              onPointerMove={(event) =>
-                handleViewportPointerMove(event, activeGraphKey, dragRef, setTransforms)
-              }
-              onPointerUp={(event) => handleViewportPointerUp(event, dragRef)}
-              onPointerCancel={(event) => handleViewportPointerUp(event, dragRef)}
-              onAuxClick={(event) => {
-                if (isMiddleMouseEvent(event)) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }
-              }}
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 3,
-                cursor: dragRef.current?.active ? "grabbing" : "grab",
-                touchAction: "none",
-              }}
-            />
           )}
           {status === "ready" && activeLayout && (
             <div
@@ -2486,86 +2465,28 @@ function handleNativeWheel(
   }));
 }
 
-function handlePointerDown(
-  event: ReactPointerEvent<SVGSVGElement>,
+function shouldStartViewportDrag(event: PointerEvent) {
+  if (isMiddlePointerEvent(event) || (event.altKey && event.button === 0)) {
+    return true;
+  }
+
+  if (event.button !== 0) {
+    return false;
+  }
+
+  if (isInteractiveArticleTarget(event.target) || isArticleContentTarget(event.target)) {
+    return false;
+  }
+
+  return true;
+}
+
+function handleNativeViewportPointerDown(
+  event: PointerEvent,
+  viewportElement: HTMLElement,
   transform: ViewTransform,
   dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
-  if (event.target !== event.currentTarget) {
-    return;
-  }
-  if (event.button !== 0 && !isMiddlePointerEvent(event)) {
-    return;
-  }
-  dragRef.current = {
-    active: true,
-    pointerId: event.pointerId,
-    moved: false,
-    suppressClick: false,
-    originX: event.clientX,
-    originY: event.clientY,
-    startX: transform.x,
-    startY: transform.y,
-  };
-  event.preventDefault();
-  event.currentTarget.setPointerCapture(event.pointerId);
-}
-
-function handlePointerMove(
-  event: ReactPointerEvent<SVGSVGElement>,
-  graphKey: GraphKey,
-  dragRef: React.MutableRefObject<ViewportDragState | null>,
-  setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
-) {
-  if (!dragRef.current?.active) {
-    return;
-  }
-  if (event.pointerId !== dragRef.current.pointerId) {
-    return;
-  }
-  const deltaX = event.clientX - dragRef.current.originX;
-  const deltaY = event.clientY - dragRef.current.originY;
-  if (Math.hypot(deltaX, deltaY) > 3) {
-    dragRef.current.moved = true;
-    dragRef.current.suppressClick = true;
-  }
-  setTransforms((existing) => ({
-    ...existing,
-    [graphKey]: {
-      ...existing[graphKey],
-      x: dragRef.current!.startX + deltaX,
-      y: dragRef.current!.startY + deltaY,
-      userMoved: true,
-    },
-  }));
-}
-
-function handlePointerUp(
-  event: ReactPointerEvent<SVGSVGElement>,
-  dragRef: React.MutableRefObject<ViewportDragState | null>,
-) {
-  if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) {
-    return;
-  }
-
-  if (dragRef.current.moved) {
-    event.preventDefault();
-  }
-
-  if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
-    event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
-  }
-  dragRef.current.active = false;
-}
-
-function handleViewportPointerDown(
-  event: ReactPointerEvent<HTMLElement>,
-  transform: ViewTransform,
-  dragRef: React.MutableRefObject<ViewportDragState | null>,
-) {
-  if (event.button !== 0 && !isMiddlePointerEvent(event)) {
-    return;
-  }
   dragRef.current = {
     active: true,
     pointerId: event.pointerId,
@@ -2578,19 +2499,11 @@ function handleViewportPointerDown(
   };
   event.preventDefault();
   event.stopPropagation();
-  event.currentTarget.setPointerCapture(event.pointerId);
+  viewportElement.setPointerCapture(event.pointerId);
 }
 
-function isMiddlePointerEvent(event: ReactPointerEvent<HTMLElement | SVGSVGElement>) {
-  return event.button === 1 || (event.buttons & 4) === 4;
-}
-
-function isMiddleMouseEvent(event: ReactMouseEvent<HTMLElement>) {
-  return event.button === 1 || (event.buttons & 4) === 4;
-}
-
-function handleViewportPointerMove(
-  event: ReactPointerEvent<HTMLElement>,
+function handleNativeViewportPointerMove(
+  event: PointerEvent,
   graphKey: GraphKey,
   dragRef: React.MutableRefObject<ViewportDragState | null>,
   setTransforms: React.Dispatch<React.SetStateAction<Record<GraphKey, ViewTransform>>>,
@@ -2618,8 +2531,9 @@ function handleViewportPointerMove(
   }));
 }
 
-function handleViewportPointerUp(
-  event: ReactPointerEvent<HTMLElement>,
+function handleNativeViewportPointerUp(
+  event: PointerEvent,
+  viewportElement: HTMLElement,
   dragRef: React.MutableRefObject<ViewportDragState | null>,
 ) {
   if (!dragRef.current || event.pointerId !== dragRef.current.pointerId) {
@@ -2631,13 +2545,21 @@ function handleViewportPointerUp(
     event.preventDefault();
   }
 
-  if (event.currentTarget.hasPointerCapture(dragRef.current.pointerId)) {
-    event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+  if (viewportElement.hasPointerCapture(dragRef.current.pointerId)) {
+    viewportElement.releasePointerCapture(dragRef.current.pointerId);
   }
   dragRef.current.active = false;
 }
 
-function isInteractiveArticleTarget(target: EventTarget) {
+function isMiddlePointerEvent(event: { button: number; buttons: number }) {
+  return event.button === 1 || (event.buttons & 4) === 4;
+}
+
+function isMiddleMouseEvent(event: { button: number; buttons: number }) {
+  return event.button === 1 || (event.buttons & 4) === 4;
+}
+
+function isInteractiveArticleTarget(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest("a, button, input, textarea, select, summary, [role='button']"));
 }
 

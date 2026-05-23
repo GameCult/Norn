@@ -136,6 +136,7 @@ export interface EpiphanyGraphViewerProps {
   viewportBackground?: CSSProperties["background"];
   focusSelection?: boolean;
   selectionFocusMode?: "preview" | "article";
+  navigationSelection?: ViewerSelection | null;
   expandedNode?: {
     graphKey: GraphKey;
     nodeId: string;
@@ -149,6 +150,7 @@ export interface EpiphanyGraphViewerProps {
     content: (node: PositionedNode) => ReactNode | null;
   };
   onExpandedNodeClick?: MouseEventHandler<HTMLElement>;
+  onNavigationComplete?: (selection: ViewerSelection) => void;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: EpiphanyCodeRef,

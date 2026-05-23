@@ -92,9 +92,11 @@ export function EpiphanyGraphViewer({
   viewportBackground,
   focusSelection = false,
   selectionFocusMode = "preview",
+  navigationSelection,
   expandedNode,
   nodeArticle,
   onExpandedNodeClick,
+  onNavigationComplete,
   onSelectionChange,
   onCodeRefSelect,
 }: EpiphanyGraphViewerProps) {
@@ -123,6 +125,7 @@ export function EpiphanyGraphViewer({
   const skipSelectionFocusRef = useRef<string | null>(null);
   const focusedSelectionKeyRef = useRef<string | null>(null);
   const focusedNodeRef = useRef<{ graphKey: GraphKey; node: PositionedNode } | null>(null);
+  const activeNavigationKeyRef = useRef<string | null>(null);
   const selection = controlledSelection === undefined ? localSelection : controlledSelection;
   const layoutModeKey = layoutModeCacheKey(layoutMode);
   const motionOptions = resolveMotionOptions(layoutMode, motion);
@@ -320,11 +323,16 @@ export function EpiphanyGraphViewer({
     }
 
     const onWheel = (event: WheelEvent) => {
+      if (viewportFlightRef.current) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       if (!event.altKey && isArticleContentTarget(event.target)) {
         return;
       }
 
-      cancelViewportFlight(viewportFlightRef);
       const {
         activeGraphKey: currentGraphKey,
         transforms: currentTransforms,
@@ -349,11 +357,16 @@ export function EpiphanyGraphViewer({
     }
 
     const onPointerDown = (event: PointerEvent) => {
+      if (viewportFlightRef.current && isInsideViewport(event, element)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       if (!isInsideViewport(event, element) || !shouldStartViewportDrag(event)) {
         return;
       }
 
-      cancelViewportFlight(viewportFlightRef);
       const {
         activeGraphKey: currentGraphKey,
         transforms: currentTransforms,
@@ -440,6 +453,67 @@ export function EpiphanyGraphViewer({
     Boolean(selectedNode) &&
     expandedNode?.graphKey === activeGraphKey &&
     expandedNode.nodeId === selectedNode?.id;
+
+  useEffect(() => {
+    if (
+      !focusSelection ||
+      !activeLayout ||
+      viewportSize.width <= 0 ||
+      viewportSize.height <= 0 ||
+      navigationSelection?.kind !== "node" ||
+      navigationSelection.graphKey !== activeGraphKey
+    ) {
+      return;
+    }
+
+    const navigationKey = `${navigationSelection.graphKey}:${navigationSelection.nodeId}`;
+    if (viewportFlightRef.current || activeNavigationKeyRef.current === navigationKey) {
+      return;
+    }
+
+    const targetNode = activeLayout.nodes.find((node) => node.id === navigationSelection.nodeId);
+    if (!targetNode) {
+      return;
+    }
+
+    const sourceNode =
+      focusedNodeRef.current?.graphKey === activeGraphKey
+        ? focusedNodeRef.current.node
+        : selectedNode;
+    activeNavigationKeyRef.current = navigationKey;
+    startViewportFlight(
+      {
+        graphKey: activeGraphKey,
+        sourceNode,
+        targetNode,
+        mode: selectionFocusMode,
+        viewportWidth: viewportSize.width,
+        viewportHeight: viewportSize.height,
+        startTransform: wheelStateRef.current.transforms[activeGraphKey],
+      },
+      viewportFlightRef,
+      setTransforms,
+      () => {
+        focusedNodeRef.current = { graphKey: activeGraphKey, node: targetNode };
+        focusedSelectionKeyRef.current = navigationKey;
+        skipSelectionFocusRef.current = navigationKey;
+        activeNavigationKeyRef.current = null;
+        onNavigationComplete?.(navigationSelection);
+      },
+    );
+  }, [
+    activeGraphKey,
+    activeLayout,
+    focusSelection,
+    navigationSelection?.kind,
+    navigationSelection?.graphKey,
+    navigationSelection?.kind === "node" ? navigationSelection.nodeId : null,
+    onNavigationComplete,
+    selectedNode,
+    selectionFocusMode,
+    viewportSize.height,
+    viewportSize.width,
+  ]);
 
   useEffect(() => {
     if (

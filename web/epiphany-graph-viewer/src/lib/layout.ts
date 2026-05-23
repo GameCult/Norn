@@ -89,7 +89,7 @@ async function layoutGraph(
       stroke: nodeStroke(graphKey, node.status),
     };
   });
-  const separatedNodes = normalizeNodeBounds(resizeNodesForSeparation(positionedNodes, sizingAlgorithm));
+  const separatedNodes = normalizeNodeBounds(separateNodeBounds(positionedNodes, sizingAlgorithm));
   const nodeLookup = new Map(separatedNodes.map((node) => [node.id, node]));
   const positionedEdges: PositionedEdge[] = graph.edges.map((source, index) => {
     const resolvedId = resolveEdgeId(source, index);
@@ -192,11 +192,15 @@ function layoutBounds(nodes: PositionedNode[]) {
   };
 }
 
-function resizeNodesForSeparation(nodes: PositionedNode[], sizingMode: NodeSizingMode): PositionedNode[] {
+function separateNodeBounds(nodes: PositionedNode[], sizingMode: NodeSizingMode): PositionedNode[] {
   if (!isCompactSizingMode(sizingMode) || nodes.length < 2) {
-    return nodes;
+    return relaxOverlappingNodes(nodes);
   }
 
+  return relaxOverlappingNodes(resizeNodesForSeparation(nodes));
+}
+
+function resizeNodesForSeparation(nodes: PositionedNode[]): PositionedNode[] {
   const nearestDistances = nodes
     .map((node, nodeIndex) => {
       const center = nodeCenter(node);
@@ -245,13 +249,15 @@ function resizeNodesForSeparation(nodes: PositionedNode[], sizingMode: NodeSizin
     };
   });
 
-  return relaxOverlappingNodes(resizedNodes);
+  return resizedNodes;
 }
 
 function relaxOverlappingNodes(nodes: PositionedNode[]): PositionedNode[] {
   let relaxedNodes = nodes;
+  const gapX = 56;
+  const gapY = 40;
 
-  for (let pass = 0; pass < 16; pass += 1) {
+  for (let pass = 0; pass < 96; pass += 1) {
     let moved = false;
     const offsets = new Map<string, { x: number; y: number }>(
       relaxedNodes.map((node) => [node.id, { x: 0, y: 0 }]),
@@ -264,8 +270,8 @@ function relaxOverlappingNodes(nodes: PositionedNode[]): PositionedNode[] {
       for (let rightIndex = leftIndex + 1; rightIndex < relaxedNodes.length; rightIndex += 1) {
         const right = relaxedNodes[rightIndex];
         const rightCenter = nodeCenter(right);
-        const overlapX = (left.width + right.width) / 2 + 18 - Math.abs(rightCenter.x - leftCenter.x);
-        const overlapY = (left.height + right.height) / 2 + 14 - Math.abs(rightCenter.y - leftCenter.y);
+        const overlapX = (left.width + right.width) / 2 + gapX - Math.abs(rightCenter.x - leftCenter.x);
+        const overlapY = (left.height + right.height) / 2 + gapY - Math.abs(rightCenter.y - leftCenter.y);
 
         if (overlapX <= 0 || overlapY <= 0) {
           continue;

@@ -464,16 +464,7 @@ export function EpiphanyGraphViewer({
     selection?.kind === "node" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.nodes.find((node) => node.id === selection.nodeId) ?? null
       : null;
-  const viewportFocusedNode =
-    focusSelection && activeLayout && viewportSize.width > 0 && viewportSize.height > 0
-      ? nodeNearestViewportCenter(
-          activeLayout.nodes,
-          activeTransform,
-          viewportSize.width,
-          viewportSize.height,
-        )
-      : null;
-  const selectedNode = focusSelection ? viewportFocusedNode ?? selectionNode : selectionNode;
+  const selectedNode = selectionNode;
   const selectedEdge =
     selection?.kind === "edge" && selection.graphKey === activeGraphKey && activeLayout
       ? activeLayout.edges.find((edge) => edge.resolvedId === selection.edgeId) ?? null

@@ -2142,7 +2142,7 @@ function startViewportFlight(
     options.viewportHeight,
   );
   const startTime = globalThis.performance.now();
-  const durationMs = 1000;
+  const durationMs = 3000;
 
   const step = (time: number) => {
     if (!flightRef.current || flightRef.current.id !== flightId) {

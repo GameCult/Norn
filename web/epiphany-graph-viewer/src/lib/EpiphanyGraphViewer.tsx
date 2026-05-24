@@ -90,6 +90,7 @@ type AdaptiveSimulationBudget = {
 
 const PANEL_SURFACE = "rgba(7, 16, 30, 0.76)";
 const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
+const VIEWPORT_FLIGHT_DURATION_OPTIONS = [1000, 3000] as const;
 
 export function EpiphanyGraphViewer({
   state,
@@ -127,6 +128,7 @@ export function EpiphanyGraphViewer({
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const [viewportFlightDurationMs, setViewportFlightDurationMs] = useState(3000);
   const [transforms, setTransforms] = useState<Record<GraphKey, ViewTransform>>({
     architecture: { x: 0, y: 0, scale: 1, userMoved: false },
     dataflow: { x: 0, y: 0, scale: 1, userMoved: false },
@@ -566,6 +568,7 @@ export function EpiphanyGraphViewer({
         mode: selectionFocusMode,
         viewportWidth: viewportSize.width,
         viewportHeight: viewportSize.height,
+        durationMs: viewportFlightDurationMs,
         startTransform: wheelStateRef.current.transforms[activeGraphKey],
       },
       viewportFlightRef,
@@ -614,6 +617,7 @@ export function EpiphanyGraphViewer({
     onViewportTargetComplete,
     selectedNode,
     selectionFocusMode,
+    viewportFlightDurationMs,
     viewportSize.height,
     viewportSize.width,
   ]);
@@ -714,6 +718,40 @@ export function EpiphanyGraphViewer({
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 999,
+                padding: "8px 10px",
+                background: "rgba(15, 23, 42, 0.82)",
+                color: "#b8c7d8",
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              <span>Flight</span>
+              <select
+                value={viewportFlightDurationMs}
+                onChange={(event) => setViewportFlightDurationMs(Number(event.currentTarget.value))}
+                style={{
+                  border: 0,
+                  borderRadius: 999,
+                  background: "rgba(7, 16, 30, 0.88)",
+                  color: "#e5eef8",
+                  font: "inherit",
+                  cursor: "pointer",
+                  padding: "3px 8px",
+                }}
+              >
+                {VIEWPORT_FLIGHT_DURATION_OPTIONS.map((durationMs) => (
+                  <option key={durationMs} value={durationMs}>
+                    {durationMs / 1000}s
+                  </option>
+                ))}
+              </select>
+            </label>
             <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1.18, transforms, commitViewTransform)}>+</ActionButton>
             <ActionButton onClick={() => nudgeZoom(activeGraphKey, 1 / 1.18, transforms, commitViewTransform)}>-</ActionButton>
             <ActionButton
@@ -2120,6 +2158,7 @@ function startViewportFlight(
     mode: NodeFocusMode;
     viewportWidth: number;
     viewportHeight: number;
+    durationMs: number;
     startTransform: ViewTransform;
   },
   flightRef: React.MutableRefObject<ViewportFlightState | null>,
@@ -2142,7 +2181,7 @@ function startViewportFlight(
     options.viewportHeight,
   );
   const startTime = globalThis.performance.now();
-  const durationMs = 3000;
+  const durationMs = clamp(options.durationMs, 250, 8000);
 
   const step = (time: number) => {
     if (!flightRef.current || flightRef.current.id !== flightId) {

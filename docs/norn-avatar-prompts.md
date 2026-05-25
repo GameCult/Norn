@@ -20,4 +20,4 @@ Generated individually on 2026-05-25, then assembled into `.voidbot/voice/norn-c
 
 ## Current Pick
 
-`C Well Of Urd Oracle` is installed as `.voidbot/voice/norn.png` and mirrored into `E:/Projects/VoidBot/assets/repo-faces/norn.png` for the Discord webhook avatar URL.
+`A Thread Cartographer`, repixelized and cropped by Metacrat, is installed as `.voidbot/voice/norn.png` and mirrored into `E:/Projects/VoidBot/assets/repo-faces/norn.png` for the Discord webhook avatar URL. The repixelized source is preserved as `.voidbot/voice/norn-candidates/norn-a-thread-cartographer-repixelized.png`.

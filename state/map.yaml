@@ -1,42 +1,47 @@
 experiment:
   name: Norn
   status: active
-  phase: initialized_persistent_state
+  phase: corrected_persistent_state_identity
   premise: >
-    Test whether explicit graph-state viewing, layout evidence, and persistent
-    repo memory help agents and humans inspect typed Epiphany machine maps
-    without drowning in transcript fog or engine furniture.
+    Test whether a React/WASM graph-sight surface backed by a Rust hybrid
+    Sugiyama / Kamada-Kawai 2D and 3D layout solver can make typed Epiphany
+    machine maps inspectable without drowning humans or agents in transcript
+    fog, static export artifacts, or engine furniture.
 
 objective:
   primary: >
     Provide the graph-sight surface for Epiphany-style typed state: architecture
-    graphs, dataflow graphs, and cross-links rendered through a usable React
-    viewer, with legacy export tooling available for static inspection and
-    benchmark evidence.
+    graphs, dataflow graphs, and cross-links rendered through a usable React/WASM
+    viewer backed by the Rust hybrid graph layout solver.
   current: >
-    Keep Norn coherent as a React-first graph viewer while preserving the .NET
-    generator/MCP server as support tooling and the Rust/WASM solver as the
-    realtime layout authority.
+    Keep Norn coherent as a React/WASM frontend for the Rust graph solver while
+    demoting the root C# generator/MCP server to bridge, export, and benchmark
+    support only.
 
 constraints:
   - Keep persistent state small enough to rehydrate quickly.
   - Prefer typed graph contracts over engine-specific public controls.
-  - Do not let legacy .NET generator behavior compete with the React viewer as
-    the product surface.
+  - Do not let root C# project shape, MSAGL support code, or MCP exports define
+    repo identity.
   - Do not add fallback layout truth behind the Rust solver for realtime viewer
     modes.
   - Treat benchmarks and rendered inspection as the proof layer for visual
     claims.
+  - Keep C# bridge work peripheral unless it explicitly routes to the Rust
+    solver and protects a named consumer contract.
 
 invariants:
   - `state/map.yaml` is canonical slow memory, not a running diary.
   - `state/scratch.md` is disposable task memory.
   - `notes/fresh-workspace-handoff.md` is the short re-entry packet.
-  - `web/norn-viewer` is the live client package.
-  - The .NET generator and MCP server are support surfaces for Obsidian exports,
-    legacy inspection, package tooling, and benchmark fixtures.
-  - The Rust solver WASM bundle is the layout authority for force-style viewer
-    modes; failures should be visible rather than silently replaced.
+  - `web/norn-viewer` is the live React/WASM client package.
+  - `E:\Projects\epiphany-graph-rs` is the Rust layout solver source lineage
+    used by the bundled WASM.
+  - The .NET generator and MCP server are peripheral support surfaces for
+    Obsidian exports, legacy inspection, package tooling, and benchmark
+    fixtures.
+  - The Rust solver WASM bundle is the layout authority for 2D and 3D hybrid
+    layout modes; failures should be visible rather than silently replaced.
   - Public viewer API remains coarse: state, layout intent, motion/performance
     knobs, selection/focus, expanded node, and callbacks.
   - Visual or layout improvements require visible inspection, benchmark output,
@@ -45,31 +50,37 @@ invariants:
 data_flow:
   observe:
     - typed Epiphany graph state from host applications
-    - Obsidian vault notes for legacy static graph generation
+    - Rust solver source and exported WASM from the neighboring solver repo
+    - Obsidian vault notes only for legacy static graph generation
     - benchmark corpora and blind graph-truth probes
     - rendered viewer or SVG output as the user-visible truth layer
   process:
     - validate and normalize graph state at the viewer boundary
-    - derive base layouts through the selected layout mode
-    - use Rust solver output as the ground-truth anchor for realtime force modes
+    - call the Rust solver through the WASM bridge for authoritative layout
+    - treat browser motion as presentation around the solver anchor
     - render graph partitions, cross-links, labels, selection, and detail panes
     - measure visual usefulness through benchmark artifacts when tuning
   output:
     - React `NornViewer` package exports
+    - embedded solver WASM bytes under `web/norn-viewer/src/lib`
     - demo build artifacts under `web/norn-viewer/dist`
     - static SVG/JSON generator output under requested output directories
     - benchmark baselines and review artifacts under `benchmarks/` or `out/`
 
 active_subgoals:
-  - Keep the React viewer API stable and coarse.
-  - Preserve the Rust solver authority for combined-force and force-style modes.
+  - Keep the React/WASM viewer API stable and coarse.
+  - Preserve Rust solver authority for hybrid Sugiyama / Kamada-Kawai 2D and 3D
+    layout.
   - Use benchmark harnesses before claiming visual usefulness or realtime budget
     improvement.
   - Keep persistent project state distilled and current.
 
 accepted_design:
-  - The React viewer is the primary product surface.
-  - The root .NET generator and MCP server remain legacy/support surfaces.
+  - The React/WASM viewer backed by the Rust solver is the primary product
+    surface.
+  - The neighboring `epiphany-graph-rs` crate is the solver authority.
+  - The root .NET generator and MCP server remain bridge/export/support
+    surfaces.
   - Viewer motion is a presentation layer around the base layout anchor, not a
     second durable graph truth.
   - Benchmark probes should measure whether rendered graphs improve graph-truth
@@ -78,8 +89,9 @@ accepted_design:
 rejected_paths:
   - name: dual_client_surface
     reason: >
-      Making the .NET generator and React viewer equal consumer surfaces would
-      split authority and force clients to understand implementation history.
+      Making the C# generator and React/WASM viewer equal consumer surfaces
+      would split authority and force clients to understand implementation
+      history.
   - name: shadow_solver_fallback
     reason: >
       Quietly replacing failed Rust solver output would create a second layout
@@ -88,17 +100,21 @@ rejected_paths:
     reason: >
       Attractive graph output is not proof that agents or humans can recover
       graph truth from the render.
+  - name: csharp_repo_identity
+    reason: >
+      The root `.csproj` is peripheral bridge/export machinery. Treating it as
+      the repo's identity hides the React/WASM frontend and Rust solver body.
 
 current_status:
   summary: >
-    Persistent state machinery has been initialized in the EpiphanyAgent style:
-    local `AGENTS.md`, canonical `state/map.yaml`, disposable
-    `state/scratch.md`, and a short `notes/fresh-workspace-handoff.md`.
-    Application behavior is unchanged.
+    Persistent state machinery has been corrected to name Norn as a React/WASM
+    frontend for the Rust hybrid graph layout solver. The C# generator/MCP
+    surface is explicitly peripheral bridge/export tooling, not the repo's
+    center of gravity.
   next_action: >
     For the next feature or fix, rehydrate from this map, identify the owning
-    surface, then verify against the visible or build surface that actually
-    carries the invariant.
+    surface, then verify against the solver, WASM bridge, viewer, or visible
+    render layer that actually carries the invariant.
 
 verification:
   default_checks:
@@ -114,6 +130,9 @@ verification:
     - command: "npm run profile:solver"
       cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
       use_when: "Rust solver WASM or layout performance claims"
+    - command: "cargo test"
+      cwd: "E:\\Projects\\epiphany-graph-rs"
+      use_when: "Rust solver source or algorithm changes"
     - command: "dotnet build E:\\Projects\\Norn\\Norn.csproj"
       cwd: "E:\\Projects\\Norn"
-      use_when: "Root .NET generator or MCP changes"
+      use_when: "Peripheral C# bridge, export, or MCP changes"

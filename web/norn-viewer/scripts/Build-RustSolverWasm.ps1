@@ -1,5 +1,5 @@
 param(
-    [string]$SolverRoot = "E:\Projects\norn-rs"
+    [string]$SolverRoot = "E:\Projects\epiphany-graph-rs"
 )
 
 $ErrorActionPreference = "Stop"

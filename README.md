@@ -1,6 +1,7 @@
 # Norn
 
-React-first graph viewer for Epiphany typed graph state.
+React/WASM graph viewer for Epiphany typed graph state, backed by a Rust-based
+hybrid Sugiyama / Kamada-Kawai 2D and 3D graph layout solver.
 
 The live package is `web/norn-viewer`. It is what clients and agents
 should reach for when they want to render `architecture`, `dataflow`, and typed

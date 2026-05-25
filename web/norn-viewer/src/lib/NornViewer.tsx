@@ -8,16 +8,16 @@ import {
   type ReactNode,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { layoutEpiphanyGraphs } from "./layout";
+import { layoutNornGraphs } from "./layout";
 import { simulationProfilePresets } from "./simulation-profile";
 import type {
   EpiphanyCodeRef,
-  EpiphanyGraphLink,
-  EpiphanyGraphLayoutModeConfig,
-  EpiphanyGraphMotionOptions,
-  EpiphanyGraphPerformanceOptions,
-  EpiphanyGraphPerformancePreset,
-  EpiphanyGraphViewerProps,
+  NornGraphLink,
+  NornGraphLayoutModeConfig,
+  NornGraphMotionOptions,
+  NornGraphPerformanceOptions,
+  NornGraphPerformancePreset,
+  NornViewerProps,
   EpiphanyValidationIssue,
   GraphKey,
   GraphLayout,
@@ -28,7 +28,7 @@ import type {
   ViewerSelection,
   ViewportTransformEnvelope,
 } from "./types";
-import { validateEpiphanyGraphsState } from "./validation";
+import { validateNornGraphsState } from "./validation";
 
 type ViewTransform = {
   x: number;
@@ -92,13 +92,13 @@ const PANEL_SURFACE = "rgba(7, 16, 30, 0.76)";
 const PANEL_BORDER = "1px solid rgba(148, 163, 184, 0.18)";
 const VIEWPORT_FLIGHT_DURATION_OPTIONS = [1000, 3000] as const;
 
-export function EpiphanyGraphViewer({
+export function NornViewer({
   state,
   initialGraph = "architecture",
   selection: controlledSelection,
   style,
   className,
-  title = "Epiphany Graph Viewer",
+  title = "Norn Viewer",
   graphLabels,
   graphDescriptions,
   layoutMode = "layered",
@@ -119,7 +119,7 @@ export function EpiphanyGraphViewer({
   onViewportTargetComplete,
   onSelectionChange,
   onCodeRefSelect,
-}: EpiphanyGraphViewerProps) {
+}: NornViewerProps) {
   const [activeGraphKey, setActiveGraphKey] = useState<GraphKey>(initialGraph);
   const [localSelection, setLocalSelection] = useState<ViewerSelection | null>(null);
   const [layouts, setLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
@@ -184,9 +184,9 @@ export function EpiphanyGraphViewer({
     let cancelled = false;
     setStatus("loading");
     setErrorMessage(null);
-    setIssues(validateEpiphanyGraphsState(state));
+    setIssues(validateNornGraphsState(state));
 
-    layoutEpiphanyGraphs(
+    layoutNornGraphs(
       state,
       layoutMode,
       viewportSize.width > 0 && viewportSize.height > 0 ? viewportSize : undefined,
@@ -370,7 +370,7 @@ export function EpiphanyGraphViewer({
     }
     const transform = transforms[activeGraphKey];
     const bounds = nodeAabb(layout.nodes);
-    element.dispatchEvent(new CustomEvent<ViewportTransformEnvelope>("epiphanygraph-viewport-transform", {
+    element.dispatchEvent(new CustomEvent<ViewportTransformEnvelope>("norn-viewport-transform", {
       bubbles: true,
       detail: {
         graphKey: activeGraphKey,
@@ -647,7 +647,7 @@ export function EpiphanyGraphViewer({
         }}
       >
         <header
-          className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
+          className={overlayPanels ? "norn-overlay-panel" : undefined}
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -807,7 +807,7 @@ export function EpiphanyGraphViewer({
           {viewportBackdrop}
 
           <div
-            className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
+            className={overlayPanels ? "norn-overlay-panel" : undefined}
             style={{
               position: "absolute",
               top: overlayPanels ? 102 : 14,
@@ -947,8 +947,8 @@ export function EpiphanyGraphViewer({
                 const rendersArticle = Boolean(nodeArticleSurface && metrics.article > 0.18);
                 const rendersCompact = !rendersArticle && metrics.preview < 0.08;
                 const className = nodeArticleSurface
-                  ? ["epiphany-graph-node-surface", nodeArticleSurface.className].filter(Boolean).join(" ")
-                  : "epiphany-graph-node-surface";
+                  ? ["norn-node-surface", nodeArticleSurface.className].filter(Boolean).join(" ")
+                  : "norn-node-surface";
 
                 return (
                   <div
@@ -1021,7 +1021,7 @@ export function EpiphanyGraphViewer({
 
       {showSidebar && (
         <aside
-        className={overlayPanels ? "epiphany-graph-overlay-panel" : undefined}
+        className={overlayPanels ? "norn-overlay-panel" : undefined}
         style={{
           display: "grid",
           gridTemplateRows: "auto auto 1fr",
@@ -1308,7 +1308,7 @@ function NodeDetails({
     title: string;
     relationship: string | null;
   }>;
-  links: EpiphanyGraphLink[];
+  links: NornGraphLink[];
   onJump: (graphKey: GraphKey, nodeId: string) => void;
   onCodeRefSelect: (codeRef: EpiphanyCodeRef) => void;
 }) {
@@ -1612,7 +1612,7 @@ function renderBackdropGrid(layout: GraphLayout, graphKey: GraphKey) {
 function findLinkedNodes(
   nodeId: string,
   graphKey: GraphKey,
-  state: EpiphanyGraphViewerProps["state"],
+  state: NornViewerProps["state"],
 ) {
   if (graphKey === "architecture") {
     return state.links
@@ -1698,7 +1698,7 @@ function nodeNearestViewportCenter(
   return nearest;
 }
 
-function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {
+function layoutModeCacheKey(mode: NornGraphLayoutModeConfig) {
   if (typeof mode === "string") {
     return mode;
   }
@@ -1707,9 +1707,9 @@ function layoutModeCacheKey(mode: EpiphanyGraphLayoutModeConfig) {
 }
 
 function resolveMotionOptions(
-  layoutMode: EpiphanyGraphLayoutModeConfig,
-  motion: EpiphanyGraphMotionOptions | boolean | undefined,
-): EpiphanyGraphMotionOptions | null {
+  layoutMode: NornGraphLayoutModeConfig,
+  motion: NornGraphMotionOptions | boolean | undefined,
+): NornGraphMotionOptions | null {
   if (motion === false) {
     return null;
   }
@@ -1730,7 +1730,7 @@ function resolveMotionOptions(
   return motion.enabled === false ? null : motion;
 }
 
-function motionOptionsCacheKey(options: EpiphanyGraphMotionOptions) {
+function motionOptionsCacheKey(options: NornGraphMotionOptions) {
   return [
     options.strength ?? "",
     options.damping ?? "",
@@ -1743,8 +1743,8 @@ function motionOptionsCacheKey(options: EpiphanyGraphMotionOptions) {
 }
 
 function resolvePerformanceOptions(
-  performance: EpiphanyGraphPerformancePreset | EpiphanyGraphPerformanceOptions | undefined,
-): Required<EpiphanyGraphPerformanceOptions> {
+  performance: NornGraphPerformancePreset | NornGraphPerformanceOptions | undefined,
+): Required<NornGraphPerformanceOptions> {
   const base = performancePresetDefaults(
     typeof performance === "string" ? performance : performance?.preset ?? "balanced",
   );
@@ -1761,8 +1761,8 @@ function resolvePerformanceOptions(
 }
 
 function performancePresetDefaults(
-  preset: EpiphanyGraphPerformancePreset,
-): Required<EpiphanyGraphPerformanceOptions> {
+  preset: NornGraphPerformancePreset,
+): Required<NornGraphPerformanceOptions> {
   if (preset === "quality") {
     return {
       preset,
@@ -1783,7 +1783,7 @@ function performancePresetDefaults(
   };
 }
 
-function performanceOptionsCacheKey(options: Required<EpiphanyGraphPerformanceOptions>) {
+function performanceOptionsCacheKey(options: Required<NornGraphPerformanceOptions>) {
   return [
     options.preset,
     options.simulationBudgetMs,
@@ -1812,7 +1812,7 @@ function clampFiniteNumber(value: number, min: number, max: number) {
 
 function createAdaptiveSimulationBudget(
   nodeCount: number,
-  options: Required<EpiphanyGraphPerformanceOptions>,
+  options: Required<NornGraphPerformanceOptions>,
 ): AdaptiveSimulationBudget {
   return {
     nodeBudget: Math.min(nodeCount, options.maxAnimatedNodes),
@@ -1825,7 +1825,7 @@ function adjustAdaptiveSimulationBudget(
   budget: AdaptiveSimulationBudget,
   costMs: number,
   nodeCount: number,
-  options: Required<EpiphanyGraphPerformanceOptions>,
+  options: Required<NornGraphPerformanceOptions>,
 ) {
   const target = options.simulationBudgetMs;
   const profile = simulationProfilePresets[options.preset];
@@ -1937,7 +1937,7 @@ function stepDynamicLayouts({
   states: React.MutableRefObject<Record<GraphKey, DynamicNodeState[]> | null>;
   activeGraphKey: GraphKey;
   transforms: Record<GraphKey, ViewTransform>;
-  motionOptions: EpiphanyGraphMotionOptions;
+  motionOptions: NornGraphMotionOptions;
   viewportElement: HTMLElement | null;
   viewportWidth: number;
   viewportHeight: number;
@@ -2023,7 +2023,7 @@ function stepDynamicLayouts({
     previousLayout,
   );
   if (motionOptions.emitNodeEnvelopes && viewportElement) {
-    viewportElement.dispatchEvent(new CustomEvent<NodeEnvelope[]>("epiphanygraph-node-envelopes", {
+    viewportElement.dispatchEvent(new CustomEvent<NodeEnvelope[]>("norn-node-envelopes", {
       bubbles: true,
       detail: nextActiveLayout.nodes.map((node) => ({
         id: node.id,
@@ -2851,7 +2851,7 @@ function isArticleContentTarget(target: EventTarget | null) {
     return false;
   }
 
-  const surface = target.closest<HTMLElement>(".epiphany-graph-node-surface");
+  const surface = target.closest<HTMLElement>(".norn-node-surface");
   if (!surface) {
     return false;
   }

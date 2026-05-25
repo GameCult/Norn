@@ -1,4 +1,4 @@
-# EpiphanyGraph Benchmarks
+# Norn Benchmarks
 
 These benchmarks measure whether a rendered graph helps a vision-capable agent recover useful graph truth.
 
@@ -47,7 +47,7 @@ The generated run contains:
 
 - `run-manifest.json`: run metadata and candidate outputs
 - `gold.json`: scoring key, kept out of per-candidate answer sheets
-- `candidates/<candidate-id>/render/`: EpiphanyGraph outputs
+- `candidates/<candidate-id>/render/`: Norn outputs
 - `candidates/<candidate-id>/render/*.png`: raster previews for image probes
 - `candidates/<candidate-id>/render/*.msagl.svg`: preserved stock baseline output
 - `candidates/<candidate-id>/render/*.rich.svg`: preserved custom renderer output
@@ -72,7 +72,7 @@ The useful benchmark result is the delta between these modes. If the image does 
 E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map
 ```
 
-It exercises the current EpiphanyGraph partition output:
+It exercises the current Norn partition output:
 
 - `source-tree.svg` and `source-tree.json`
 - `control-flow.svg` and `control-flow.json`
@@ -98,7 +98,7 @@ heuristic tuning.
 Current smoke baseline:
 
 ```powershell
-cd .\web\epiphany-graph-viewer
+cd .\web\norn-viewer
 npm run tune:simulation
 ```
 

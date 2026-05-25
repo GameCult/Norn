@@ -1,6 +1,6 @@
 # Model Friendliness Rendering Tuner
 
-This tuner guides experiments that make EpiphanyGraph output easier for both humans and vision-capable agents to understand.
+This tuner guides experiments that make Norn output easier for both humans and vision-capable agents to understand.
 
 The point is not to make a prettier hairball. The point is to render graphs in ways that expose useful structure quickly, with enough machine-readable backing data to verify what the eyes think they saw.
 
@@ -214,7 +214,7 @@ is how a dashboard learns to lie with posture.
 The current smoke path is:
 
 ```powershell
-cd .\web\epiphany-graph-viewer
+cd .\web\norn-viewer
 npm run tune:simulation
 ```
 

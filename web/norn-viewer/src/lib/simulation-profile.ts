@@ -1,4 +1,4 @@
-import type { EpiphanyGraphPerformancePreset } from "./types";
+import type { NornGraphPerformancePreset } from "./types";
 
 export type SimulationProfilePreset = {
   simulationBudgetMs: number;
@@ -13,7 +13,7 @@ export type SimulationProfilePreset = {
   nodeBudgetGrowthAdd: number;
 };
 
-export const simulationProfilePresets: Record<EpiphanyGraphPerformancePreset, SimulationProfilePreset> = {
+export const simulationProfilePresets: Record<NornGraphPerformancePreset, SimulationProfilePreset> = {
   quality: {
     simulationBudgetMs: 8,
     targetFps: 60,

@@ -18,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($ProjectPath)) {
-    $ProjectPath = Join-Path $repoRoot "EpiphanyGraph.csproj"
+    $ProjectPath = Join-Path $repoRoot "Norn.csproj"
 }
 
 function Get-SvgRasterizerPath {

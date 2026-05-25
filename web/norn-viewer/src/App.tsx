@@ -1,5 +1,5 @@
-import { EpiphanyGraphViewer } from "./lib/EpiphanyGraphViewer";
-import { mockEpiphanyGraphState } from "./lib/mock-state";
+import { NornViewer } from "./lib/NornViewer";
+import { mockNornGraphState } from "./lib/mock-state";
 
 export function App() {
   return (
@@ -66,8 +66,8 @@ export function App() {
         </div>
       </section>
       <section style={{ padding: "0 20px 20px" }}>
-        <EpiphanyGraphViewer
-          state={mockEpiphanyGraphState}
+        <NornViewer
+          state={mockNornGraphState}
           layoutMode="combined-force"
           motion={{ strength: 1.08, flow: 1.1, orbit: 0.82, lift: 0.9 }}
           performance="fast"

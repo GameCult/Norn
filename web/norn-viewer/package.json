@@ -1,5 +1,5 @@
 {
-  "name": "@epiphanygraph/epiphany-graph-viewer",
+  "name": "@gamecult/norn-viewer",
   "version": "0.1.0",
   "type": "module",
   "description": "React graph viewer for Epiphany typed graph state.",

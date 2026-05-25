@@ -6,8 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>epiphanygraph</ToolCommandName>
-    <PackageId>EpiphanyGraph</PackageId>
+    <ToolCommandName>norn</ToolCommandName>
+    <PackageId>Norn</PackageId>
     <Version>0.1.0</Version>
     <Description>Generate Obsidian note layouts with MSAGL and expose the generator as an MCP tool.</Description>
     <PackageTags>obsidian;graph;msagl;mcp</PackageTags>

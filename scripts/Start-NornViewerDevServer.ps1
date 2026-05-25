@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = (Resolve-Path (Join-Path $scriptDir "..")).Path
-$viewerDir = Join-Path $repoRoot "web\epiphany-graph-viewer"
+$viewerDir = Join-Path $repoRoot "web\norn-viewer"
 $packageJson = Join-Path $viewerDir "package.json"
 $nodeModulesDir = Join-Path $viewerDir "node_modules"
 
@@ -46,7 +46,7 @@ $npmArgs = @(
 
 if ($Detached) {
     if ([string]::IsNullOrWhiteSpace($LogDir)) {
-        $LogDir = Join-Path $repoRoot "out\epiphany-graph-viewer"
+        $LogDir = Join-Path $repoRoot "out\norn-viewer"
     }
 
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null

@@ -1,4 +1,4 @@
-# Epiphany Graph Viewer
+# Norn Viewer
 
 React component package for browsing Epiphany's durable typed graph state.
 
@@ -16,7 +16,7 @@ was how we got the little public API landfill.
 ## Install
 
 ```powershell
-cd E:\Projects\EpiphanyGraph\web\epiphany-graph-viewer
+cd E:\Projects\Norn\web\norn-viewer
 npm install
 ```
 
@@ -43,11 +43,11 @@ This writes:
 
 ## Rust Solver WASM
 
-The viewer uses `epiphany-graph-rs` as its layout authority. The bundled WASM is
+The viewer uses `norn-rs` as its layout authority. The bundled WASM is
 checked into `src/lib/solver-wasm-bytes.ts` so the package builds without a separate
 asset pipeline.
 
-Regenerate it after changing `E:\Projects\epiphany-graph-rs`:
+Regenerate it after changing `E:\Projects\norn-rs`:
 
 ```powershell
 npm run build:solver:wasm
@@ -59,10 +59,10 @@ engine behind the component.
 ## Use In Another App
 
 ```tsx
-import { EpiphanyGraphViewer } from "@epiphanygraph/epiphany-graph-viewer";
-import type { EpiphanyGraphsState } from "@epiphanygraph/epiphany-graph-viewer";
+import { NornViewer } from "@gamecult/norn-viewer";
+import type { NornGraphsState } from "@gamecult/norn-viewer";
 
-const state: EpiphanyGraphsState = {
+const state: NornGraphsState = {
   architecture: { nodes: [], edges: [] },
   dataflow: { nodes: [], edges: [] },
   links: [],
@@ -70,7 +70,7 @@ const state: EpiphanyGraphsState = {
 
 export function Screen() {
   return (
-    <EpiphanyGraphViewer
+    <NornViewer
       state={state}
       layoutMode="combined-force"
       motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
@@ -84,7 +84,7 @@ export function Screen() {
 
 The package exports:
 
-- `EpiphanyGraphViewer`
+- `NornViewer`
 - state, selection, node, edge, layout mode, motion, performance, and event payload types
 
 The package does not export demo data, validation helpers, probes, SVG renderers,
@@ -101,7 +101,7 @@ the warehouse inventory.
 `layoutMode` accepts one mode for both graphs or per-graph modes:
 
 ```tsx
-<EpiphanyGraphViewer
+<NornViewer
   state={state}
   layoutMode={{ architecture: "layered", dataflow: "combined-force" }}
 />
@@ -113,7 +113,7 @@ the warehouse inventory.
 tune the viewer-owned model:
 
 ```tsx
-<EpiphanyGraphViewer
+<NornViewer
   state={state}
   layoutMode="combined-force"
   motion={{
@@ -128,7 +128,7 @@ tune the viewer-owned model:
 />
 ```
 
-`emitNodeEnvelopes` dispatches `epiphanygraph-node-envelopes` from the viewport for
+`emitNodeEnvelopes` dispatches `norn-node-envelopes` from the viewport for
 backdrops that want node-aware effects without owning graph physics.
 
 ## Performance
@@ -138,7 +138,7 @@ milliseconds, and the viewer measures each step so it can adjust sampled node co
 and edge refresh rate automatically.
 
 ```tsx
-<EpiphanyGraphViewer
+<NornViewer
   state={state}
   layoutMode="combined-force"
   performance="fast"
@@ -156,7 +156,7 @@ authority; the other values are starting ceilings and cadence hints the adaptive
 can tighten when frames get expensive.
 
 ```tsx
-<EpiphanyGraphViewer
+<NornViewer
   state={state}
   layoutMode="combined-force"
   performance={{

@@ -16,7 +16,7 @@ Generated individually on 2026-05-25, then assembled into `.voidbot/voice/norn-c
 
 ## D Triune Fate Weaver
 
-128px pixel art Discord avatar, square portrait for Norn, a single Norse fate-weaver who embodies Urd, Verdandi, and Skuld as three ghostly thread-shadows behind her shoulders. She is the mascot for EpiphanyGraph: graph layout, typed links, stable mental maps. She holds a small carved spindle/loom shuttle and pulls three colored graph strands: one silver straight hierarchy strand, one teal living force strand, one gold future path strand. Expression: sharp, amused, unfooled, protective of truth. Background: dark Yggdrasil roots and faint node-link constellations. Palette not too purple: black, slate, ash white, cyan, antique gold. Clean high-quality pixel art, readable at avatar size, no text, no letters, no watermark.
+128px pixel art Discord avatar, square portrait for Norn, a single Norse fate-weaver who embodies Urd, Verdandi, and Skuld as three ghostly thread-shadows behind her shoulders. She is the mascot for Norn: graph layout, typed links, stable mental maps. She holds a small carved spindle/loom shuttle and pulls three colored graph strands: one silver straight hierarchy strand, one teal living force strand, one gold future path strand. Expression: sharp, amused, unfooled, protective of truth. Background: dark Yggdrasil roots and faint node-link constellations. Palette not too purple: black, slate, ash white, cyan, antique gold. Clean high-quality pixel art, readable at avatar size, no text, no letters, no watermark.
 
 ## Current Pick
 

@@ -25,7 +25,7 @@ static class RichSvgRenderer
         AppendDefs(document, theme);
         document.AppendLine($"""  <title id="title">{Escape(report.GraphTitle)} ({Escape(report.GraphKey)})</title>""");
         document.AppendLine(
-            $"""  <desc id="desc">EpiphanyGraph rich renderer output for {Escape(report.GraphKey)} using {Escape(report.LayoutMode)} layout with {report.NodeCount} nodes and {report.EdgeCount} edges.</desc>""");
+            $"""  <desc id="desc">Norn rich renderer output for {Escape(report.GraphKey)} using {Escape(report.LayoutMode)} layout with {report.NodeCount} nodes and {report.EdgeCount} edges.</desc>""");
         document.AppendLine($"""  <rect x="0" y="0" width="{Fmt(canvas.Width)}" height="{Fmt(canvas.Height)}" fill="url(#bg-gradient)" />""");
         document.AppendLine($"""  <rect x="0" y="0" width="{Fmt(canvas.Width)}" height="{Fmt(canvas.Height)}" fill="url(#bg-vignette)" opacity="0.18" />""");
         AppendGuides(document, report, rawNodes, projection, canvas, theme);

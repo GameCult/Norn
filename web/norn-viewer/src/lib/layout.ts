@@ -1,11 +1,11 @@
 import { layoutWithRustSolver } from "./solver-wasm";
 import type {
-  EpiphanyGraph,
-  EpiphanyGraphEdge,
-  EpiphanyGraphLink,
-  EpiphanyGraphsState,
-  EpiphanyGraphLayoutMode,
-  EpiphanyGraphLayoutModeConfig,
+  NornGraph,
+  NornGraphEdge,
+  NornGraphLink,
+  NornGraphsState,
+  NornGraphLayoutMode,
+  NornGraphLayoutModeConfig,
   GraphKey,
   GraphLayout,
   PositionedEdge,
@@ -20,9 +20,9 @@ type LayoutViewport = {
   height: number;
 };
 
-export async function layoutEpiphanyGraphs(
-  state: EpiphanyGraphsState,
-  mode: EpiphanyGraphLayoutModeConfig = "layered",
+export async function layoutNornGraphs(
+  state: NornGraphsState,
+  mode: NornGraphLayoutModeConfig = "layered",
   viewport?: LayoutViewport,
 ): Promise<Record<GraphKey, GraphLayout>> {
   const [architecture, dataflow] = await Promise.all([
@@ -35,9 +35,9 @@ export async function layoutEpiphanyGraphs(
 
 async function layoutGraph(
   graphKey: GraphKey,
-  graph: EpiphanyGraph,
-  links: EpiphanyGraphLink[],
-  mode: EpiphanyGraphLayoutMode = "layered",
+  graph: NornGraph,
+  links: NornGraphLink[],
+  mode: NornGraphLayoutMode = "layered",
   viewport?: LayoutViewport,
 ): Promise<GraphLayout> {
   const sizingAlgorithm = sizingAlgorithmForMode(mode);
@@ -120,8 +120,8 @@ async function layoutGraph(
 
 function layoutModeFor(
   graphKey: GraphKey,
-  mode: EpiphanyGraphLayoutModeConfig,
-): EpiphanyGraphLayoutMode {
+  mode: NornGraphLayoutModeConfig,
+): NornGraphLayoutMode {
   if (typeof mode === "string") {
     return mode;
   }
@@ -129,11 +129,11 @@ function layoutModeFor(
   return mode[graphKey] ?? "layered";
 }
 
-function sizingAlgorithmForMode(mode: EpiphanyGraphLayoutMode): NodeSizingMode {
+function sizingAlgorithmForMode(mode: NornGraphLayoutMode): NodeSizingMode {
   return mode === "layered" ? "layered" : "compact";
 }
 
-function rustSolverConfigFor(graphKey: GraphKey, mode: EpiphanyGraphLayoutMode) {
+function rustSolverConfigFor(graphKey: GraphKey, mode: NornGraphLayoutMode) {
   if (mode === "layered") {
     return {
       iterations: graphKey === "architecture" ? 320 : 300,
@@ -331,7 +331,7 @@ function nodeCenter(node: { x: number; y: number; width: number; height: number 
   };
 }
 
-function buildNodeDegrees(graph: EpiphanyGraph) {
+function buildNodeDegrees(graph: NornGraph) {
   const degrees = new Map<string, number>();
   for (const node of graph.nodes ?? []) {
     degrees.set(node.id, 0);
@@ -343,7 +343,7 @@ function buildNodeDegrees(graph: EpiphanyGraph) {
   return degrees;
 }
 
-function buildLinkCounts(graphKey: GraphKey, links: EpiphanyGraphLink[]) {
+function buildLinkCounts(graphKey: GraphKey, links: NornGraphLink[]) {
   const counts = new Map<string, number>();
   for (const link of links ?? []) {
     const nodeId =
@@ -353,7 +353,7 @@ function buildLinkCounts(graphKey: GraphKey, links: EpiphanyGraphLink[]) {
   return counts;
 }
 
-function resolveEdgeId(edge: EpiphanyGraphEdge, index: number) {
+function resolveEdgeId(edge: NornGraphEdge, index: number) {
   return edge.id?.trim() ? edge.id : `${edge.source_id}->${edge.target_id}:${edge.kind}:${index}`;
 }
 
@@ -456,7 +456,7 @@ function estimateCharacterCapacity(pixelWidth: number, averageCharWidth: number)
 }
 
 function straightEdgePoints(
-  edge: EpiphanyGraphEdge,
+  edge: NornGraphEdge,
   nodes: Map<string, PositionedNode>,
 ) {
   const source = nodes.get(edge.source_id);

@@ -10,7 +10,7 @@ export interface EpiphanyCodeRef {
   note?: string | null;
 }
 
-export interface EpiphanyGraphNode {
+export interface NornGraphNode {
   id: string;
   title: string;
   purpose: string;
@@ -20,7 +20,7 @@ export interface EpiphanyGraphNode {
   code_refs?: EpiphanyCodeRef[];
 }
 
-export interface EpiphanyGraphEdge {
+export interface NornGraphEdge {
   source_id: string;
   target_id: string;
   kind: string;
@@ -30,34 +30,34 @@ export interface EpiphanyGraphEdge {
   code_refs?: EpiphanyCodeRef[];
 }
 
-export interface EpiphanyGraph {
-  nodes: EpiphanyGraphNode[];
-  edges: EpiphanyGraphEdge[];
+export interface NornGraph {
+  nodes: NornGraphNode[];
+  edges: NornGraphEdge[];
 }
 
-export interface EpiphanyGraphLink {
+export interface NornGraphLink {
   dataflow_node_id: string;
   architecture_node_id: string;
   relationship?: string | null;
   code_refs?: EpiphanyCodeRef[];
 }
 
-export interface EpiphanyGraphsState {
-  architecture: EpiphanyGraph;
-  dataflow: EpiphanyGraph;
-  links: EpiphanyGraphLink[];
+export interface NornGraphsState {
+  architecture: NornGraph;
+  dataflow: NornGraph;
+  links: NornGraphLink[];
 }
 
-export type EpiphanyGraphLabels = Partial<Record<GraphKey, string>>;
-export type EpiphanyGraphDescriptions = Partial<Record<GraphKey, string>>;
-export type EpiphanyGraphLayoutMode = "layered" | "stress" | "force" | "combined-force";
-export type EpiphanyGraphLayoutModeConfig =
-  | EpiphanyGraphLayoutMode
-  | Partial<Record<GraphKey, EpiphanyGraphLayoutMode>>;
-export type EpiphanyGraphPerformancePreset = "quality" | "balanced" | "fast";
+export type NornGraphLabels = Partial<Record<GraphKey, string>>;
+export type NornGraphDescriptions = Partial<Record<GraphKey, string>>;
+export type NornGraphLayoutMode = "layered" | "stress" | "force" | "combined-force";
+export type NornGraphLayoutModeConfig =
+  | NornGraphLayoutMode
+  | Partial<Record<GraphKey, NornGraphLayoutMode>>;
+export type NornGraphPerformancePreset = "quality" | "balanced" | "fast";
 
-export interface EpiphanyGraphPerformanceOptions {
-  preset?: EpiphanyGraphPerformancePreset;
+export interface NornGraphPerformanceOptions {
+  preset?: NornGraphPerformancePreset;
   simulationBudgetMs?: number;
   targetFps?: number;
   maxAnimatedNodes?: number;
@@ -65,7 +65,7 @@ export interface EpiphanyGraphPerformanceOptions {
   maxTimeStepMs?: number;
 }
 
-export interface EpiphanyGraphMotionOptions {
+export interface NornGraphMotionOptions {
   enabled?: boolean;
   strength?: number;
   damping?: number;
@@ -116,18 +116,18 @@ export type ViewportTransformEnvelope = {
   };
 };
 
-export interface EpiphanyGraphViewerProps {
-  state: EpiphanyGraphsState;
+export interface NornViewerProps {
+  state: NornGraphsState;
   initialGraph?: GraphKey;
   selection?: ViewerSelection | null;
   style?: CSSProperties;
   className?: string;
   title?: string;
-  graphLabels?: EpiphanyGraphLabels;
-  graphDescriptions?: EpiphanyGraphDescriptions;
-  layoutMode?: EpiphanyGraphLayoutModeConfig;
-  motion?: EpiphanyGraphMotionOptions | boolean;
-  performance?: EpiphanyGraphPerformancePreset | EpiphanyGraphPerformanceOptions;
+  graphLabels?: NornGraphLabels;
+  graphDescriptions?: NornGraphDescriptions;
+  layoutMode?: NornGraphLayoutModeConfig;
+  motion?: NornGraphMotionOptions | boolean;
+  performance?: NornGraphPerformancePreset | NornGraphPerformanceOptions;
   sidebar?: ReactNode;
   sidebarWidth?: CSSProperties["width"];
   showSidebar?: boolean;
@@ -166,7 +166,7 @@ export interface PositionedPoint {
   y: number;
 }
 
-export interface PositionedNode extends EpiphanyGraphNode {
+export interface PositionedNode extends NornGraphNode {
   graphKey: GraphKey;
   x: number;
   y: number;
@@ -179,7 +179,7 @@ export interface PositionedNode extends EpiphanyGraphNode {
   stroke: string;
 }
 
-export interface PositionedEdge extends EpiphanyGraphEdge {
+export interface PositionedEdge extends NornGraphEdge {
   resolvedId: string;
   graphKey: GraphKey;
   points: PositionedPoint[];

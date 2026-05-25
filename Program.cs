@@ -40,7 +40,7 @@ static class McpServerMode
         builder.Services
             .AddMcpServer()
             .WithStdioServerTransport()
-            .WithTools<EpiphanyGraphMcpTools>();
+            .WithTools<NornMcpTools>();
 
         await builder.Build().RunAsync();
         return 0;
@@ -99,13 +99,13 @@ static class ProgramEntry
     {
         Console.WriteLine("""
 Usage:
-  epiphanygraph --vault-root <path> [--output-dir <path>] [--entry-note <name>] [--layout sugiyama|mds] [--renderer msagl|rich] [--include-unreachable]
-  epiphanygraph --mcp
+  norn --vault-root <path> [--output-dir <path>] [--entry-note <name>] [--layout sugiyama|mds] [--renderer msagl|rich] [--include-unreachable]
+  norn --mcp
 
 Examples:
-  epiphanygraph --vault-root "E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map" --entry-note "Source Tree Map"
-  epiphanygraph --vault-root "E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map" --entry-note "Source Tree Map" --layout mds --renderer rich --output-dir ".\out\mds"
-  epiphanygraph --mcp
+  norn --vault-root "E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map" --entry-note "Source Tree Map"
+  norn --vault-root "E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map" --entry-note "Source Tree Map" --layout mds --renderer rich --output-dir ".\out\mds"
+  norn --mcp
 
 Outputs:
   manifest.json       overall run summary plus partition outputs
@@ -410,7 +410,7 @@ static class RendererModeExtensions
 }
 
 [McpServerToolType]
-sealed class EpiphanyGraphMcpTools
+sealed class NornMcpTools
 {
     [McpServerTool(
         Name = "generate_obsidian_graph_layout",
@@ -1408,8 +1408,8 @@ static class FrontMatterGraphFamilyParser
 {
     private static readonly string[] FamilyKeys =
     [
-        "epiphany-graph-family",
-        "epiphany-graph-families",
+        "norn-family",
+        "norn-families",
         "graph-family",
         "graph-families",
     ];

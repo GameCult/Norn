@@ -1,8 +1,8 @@
-# EpiphanyGraph
+# Norn
 
 React-first graph viewer for Epiphany typed graph state.
 
-The live package is `web/epiphany-graph-viewer`. It is what clients and agents
+The live package is `web/norn-viewer`. It is what clients and agents
 should reach for when they want to render `architecture`, `dataflow`, and typed
 cross-links in a UI.
 
@@ -14,18 +14,18 @@ show booth.
 ## React Viewer
 
 ```powershell
-cd E:\Projects\EpiphanyGraph\web\epiphany-graph-viewer
+cd E:\Projects\Norn\web\norn-viewer
 npm install
 npm run dev
 ```
 
 ```tsx
-import { EpiphanyGraphViewer } from "@epiphanygraph/epiphany-graph-viewer";
-import type { EpiphanyGraphsState } from "@epiphanygraph/epiphany-graph-viewer";
+import { NornViewer } from "@gamecult/norn-viewer";
+import type { NornGraphsState } from "@gamecult/norn-viewer";
 
-export function GraphScreen({ state }: { state: EpiphanyGraphsState }) {
+export function GraphScreen({ state }: { state: NornGraphsState }) {
   return (
-    <EpiphanyGraphViewer
+    <NornViewer
       state={state}
       layoutMode="combined-force"
       motion={{ strength: 1.05, flow: 1.1, orbit: 0.85 }}
@@ -82,7 +82,7 @@ dotnet run --project . -- `
 After packing as a .NET tool:
 
 ```powershell
-epiphanygraph `
+norn `
   --vault-root "E:\Projects\Aetheria-Economy\Aetheria\Source Tree Map" `
   --entry-note "Source Tree Map" `
   --renderer rich `
@@ -102,12 +102,12 @@ Use this in an MCP client config when you want to launch the server straight fro
 ```json
 {
   "mcpServers": {
-    "epiphanygraph": {
+    "norn": {
       "command": "dotnet",
       "args": [
         "run",
         "--project",
-        "E:\\Projects\\EpiphanyGraph\\EpiphanyGraph.csproj",
+        "E:\\Projects\\Norn\\Norn.csproj",
         "--",
         "--mcp"
       ]
@@ -127,7 +127,7 @@ dotnet pack . -c Release -o .\nupkg
 Install it from the local package output:
 
 ```powershell
-dotnet tool install --global --add-source .\nupkg EpiphanyGraph
+dotnet tool install --global --add-source .\nupkg Norn
 ```
 
 Then point your MCP client at the installed command:
@@ -135,8 +135,8 @@ Then point your MCP client at the installed command:
 ```json
 {
   "mcpServers": {
-    "epiphanygraph": {
-      "command": "epiphanygraph",
+    "norn": {
+      "command": "norn",
       "args": ["--mcp"]
     }
   }
@@ -171,7 +171,7 @@ You can override that with frontmatter on a note:
 
 ```yaml
 ---
-epiphany-graph-family: control-flow
+norn-family: control-flow
 ---
 ```
 
@@ -179,7 +179,7 @@ or:
 
 ```yaml
 ---
-epiphany-graph-families:
+norn-families:
   - source-tree
   - control-flow
 ---
@@ -187,8 +187,8 @@ epiphany-graph-families:
 
 Supported keys:
 
-- `epiphany-graph-family`
-- `epiphany-graph-families`
+- `norn-family`
+- `norn-families`
 - `graph-family`
 - `graph-families`
 
@@ -211,9 +211,9 @@ That keeps structurally separated note graphs from vanishing just because they n
 - `msagl`: the stock MSAGL SVG, useful as the plain baseline
 - `rich`: a custom SVG renderer that consumes MSAGL graph geometry and semantic metadata, then draws something with more visual hierarchy and less beige despair
 
-## Support Tool: Epiphany Graph Viewer Demo
+## Support Tool: Norn Viewer Demo
 
-The web-side viewer package lives under `web/epiphany-graph-viewer/`.
+The web-side viewer package lives under `web/norn-viewer/`.
 
 It consumes the typed Epiphany graph state shape directly:
 
@@ -233,7 +233,7 @@ and packages:
 Run it locally with:
 
 ```powershell
-cd E:\Projects\EpiphanyGraph\web\epiphany-graph-viewer
+cd E:\Projects\Norn\web\norn-viewer
 npm install
 npm run dev
 ```

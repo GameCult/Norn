@@ -1,0 +1,119 @@
+experiment:
+  name: Norn
+  status: active
+  phase: initialized_persistent_state
+  premise: >
+    Test whether explicit graph-state viewing, layout evidence, and persistent
+    repo memory help agents and humans inspect typed Epiphany machine maps
+    without drowning in transcript fog or engine furniture.
+
+objective:
+  primary: >
+    Provide the graph-sight surface for Epiphany-style typed state: architecture
+    graphs, dataflow graphs, and cross-links rendered through a usable React
+    viewer, with legacy export tooling available for static inspection and
+    benchmark evidence.
+  current: >
+    Keep Norn coherent as a React-first graph viewer while preserving the .NET
+    generator/MCP server as support tooling and the Rust/WASM solver as the
+    realtime layout authority.
+
+constraints:
+  - Keep persistent state small enough to rehydrate quickly.
+  - Prefer typed graph contracts over engine-specific public controls.
+  - Do not let legacy .NET generator behavior compete with the React viewer as
+    the product surface.
+  - Do not add fallback layout truth behind the Rust solver for realtime viewer
+    modes.
+  - Treat benchmarks and rendered inspection as the proof layer for visual
+    claims.
+
+invariants:
+  - `state/map.yaml` is canonical slow memory, not a running diary.
+  - `state/scratch.md` is disposable task memory.
+  - `notes/fresh-workspace-handoff.md` is the short re-entry packet.
+  - `web/norn-viewer` is the live client package.
+  - The .NET generator and MCP server are support surfaces for Obsidian exports,
+    legacy inspection, package tooling, and benchmark fixtures.
+  - The Rust solver WASM bundle is the layout authority for force-style viewer
+    modes; failures should be visible rather than silently replaced.
+  - Public viewer API remains coarse: state, layout intent, motion/performance
+    knobs, selection/focus, expanded node, and callbacks.
+  - Visual or layout improvements require visible inspection, benchmark output,
+    or both.
+
+data_flow:
+  observe:
+    - typed Epiphany graph state from host applications
+    - Obsidian vault notes for legacy static graph generation
+    - benchmark corpora and blind graph-truth probes
+    - rendered viewer or SVG output as the user-visible truth layer
+  process:
+    - validate and normalize graph state at the viewer boundary
+    - derive base layouts through the selected layout mode
+    - use Rust solver output as the ground-truth anchor for realtime force modes
+    - render graph partitions, cross-links, labels, selection, and detail panes
+    - measure visual usefulness through benchmark artifacts when tuning
+  output:
+    - React `NornViewer` package exports
+    - demo build artifacts under `web/norn-viewer/dist`
+    - static SVG/JSON generator output under requested output directories
+    - benchmark baselines and review artifacts under `benchmarks/` or `out/`
+
+active_subgoals:
+  - Keep the React viewer API stable and coarse.
+  - Preserve the Rust solver authority for combined-force and force-style modes.
+  - Use benchmark harnesses before claiming visual usefulness or realtime budget
+    improvement.
+  - Keep persistent project state distilled and current.
+
+accepted_design:
+  - The React viewer is the primary product surface.
+  - The root .NET generator and MCP server remain legacy/support surfaces.
+  - Viewer motion is a presentation layer around the base layout anchor, not a
+    second durable graph truth.
+  - Benchmark probes should measure whether rendered graphs improve graph-truth
+    recovery, not whether they look impressive.
+
+rejected_paths:
+  - name: dual_client_surface
+    reason: >
+      Making the .NET generator and React viewer equal consumer surfaces would
+      split authority and force clients to understand implementation history.
+  - name: shadow_solver_fallback
+    reason: >
+      Quietly replacing failed Rust solver output would create a second layout
+      truth and hide the failure mode from consumers.
+  - name: visual_vibes_as_evidence
+    reason: >
+      Attractive graph output is not proof that agents or humans can recover
+      graph truth from the render.
+
+current_status:
+  summary: >
+    Persistent state machinery has been initialized in the EpiphanyAgent style:
+    local `AGENTS.md`, canonical `state/map.yaml`, disposable
+    `state/scratch.md`, and a short `notes/fresh-workspace-handoff.md`.
+    Application behavior is unchanged.
+  next_action: >
+    For the next feature or fix, rehydrate from this map, identify the owning
+    surface, then verify against the visible or build surface that actually
+    carries the invariant.
+
+verification:
+  default_checks:
+    - command: "npm run typecheck"
+      cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
+      use_when: "React viewer TypeScript or API changes"
+    - command: "npm run build"
+      cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
+      use_when: "React viewer build, package, or demo changes"
+    - command: "npm run tune:simulation"
+      cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
+      use_when: "Realtime simulation budget or sampling changes"
+    - command: "npm run profile:solver"
+      cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
+      use_when: "Rust solver WASM or layout performance claims"
+    - command: "dotnet build E:\\Projects\\Norn\\Norn.csproj"
+      cwd: "E:\\Projects\\Norn"
+      use_when: "Root .NET generator or MCP changes"

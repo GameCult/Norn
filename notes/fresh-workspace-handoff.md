@@ -10,9 +10,9 @@ repo identity has been corrected:
 - `state/scratch.md` is disposable working memory.
 - this handoff is the short re-entry packet.
 
-Norn is a React/WASM frontend for the Rust hybrid Sugiyama / Kamada-Kawai 2D and
-3D graph layout solver. The root C# project is peripheral bridge/export/MCP
-machinery. It may be useful, but it is not the throne.
+Norn is the Rust hybrid Sugiyama / Kamada-Kawai 2D and 3D graph layout solver.
+The React/WASM package and root C# project are windows onto that solver:
+inspection, bridge, export, and MCP machinery. Useful, but not the throne.
 
 No active implementation task is in flight.
 
@@ -21,8 +21,8 @@ No active implementation task is in flight.
 When a new task starts, rehydrate from `state/map.yaml`, then choose the narrowest
 surface that owns the requested behavior:
 
+- Rust solver or algorithm work starts in `crates/norn-rs`.
 - React viewer work starts in `web/norn-viewer`.
-- Rust solver or algorithm work starts in `E:\Projects\norn-rs`.
 - Static export, C# bridge, or MCP work starts in the root .NET project only
   after its bridge contract is named.
 - Visual-quality claims should pass through the benchmark harness or direct
@@ -30,5 +30,5 @@ surface that owns the requested behavior:
 
 ## Verification Notes
 
-This persistence correction tracks the full rebrand: the solver root, frontend
-wrapper, package consumers, and embed paths should use Norn names.
+The solver implementation now lives in-repo under `crates/norn-rs`; do not
+rehydrate future solver work from an external neighbor repo.

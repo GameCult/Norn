@@ -1,0 +1,14 @@
+[package]
+name = "norn-rs"
+version = "0.1.0"
+edition = "2024"
+description = "Norn hybrid Sugiyama/Kamada-Kawai 2D and 3D graph layout solver."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/GameCult/Norn"
+keywords = ["graph", "layout", "sugiyama", "kamada-kawai"]
+categories = ["algorithms", "visualization"]
+
+[dependencies]
+
+[lib]
+crate-type = ["rlib", "cdylib"]

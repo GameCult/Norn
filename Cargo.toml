@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/norn-rs"]
+resolver = "3"

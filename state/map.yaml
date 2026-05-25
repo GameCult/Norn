@@ -1,22 +1,22 @@
 experiment:
   name: Norn
   status: active
-  phase: corrected_persistent_state_identity
+  phase: in_repo_rust_solver_authority
   premise: >
-    Test whether a React/WASM graph-sight surface backed by a Rust hybrid
-    Sugiyama / Kamada-Kawai 2D and 3D layout solver can make typed Epiphany
-    machine maps inspectable without drowning humans or agents in transcript
-    fog, static export artifacts, or engine furniture.
+    Test whether a Rust hybrid Sugiyama / Kamada-Kawai 2D and 3D layout solver
+    with React/WASM and C# windows can make typed Epiphany machine maps
+    inspectable without drowning humans or agents in transcript fog, static
+    export artifacts, or engine furniture.
 
 objective:
   primary: >
-    Provide the graph-sight surface for Epiphany-style typed state: architecture
-    graphs, dataflow graphs, and cross-links rendered through a usable React/WASM
-    viewer backed by the Rust hybrid graph layout solver.
+    Provide the Rust hybrid graph layout solver for Epiphany-style typed state:
+    architecture graphs, dataflow graphs, and cross-links rendered through
+    React/WASM and C# windows.
   current: >
-    Keep Norn coherent as a React/WASM frontend for the Rust graph solver while
-    demoting the root C# generator/MCP server to bridge, export, and benchmark
-    support only.
+    Keep Norn coherent as the in-repo Rust graph solver while treating the
+    React/WASM viewer and root C# generator/MCP server as inspection, bridge,
+    export, and benchmark surfaces only.
 
 constraints:
   - Keep persistent state small enough to rehydrate quickly.
@@ -34,9 +34,8 @@ invariants:
   - `state/map.yaml` is canonical slow memory, not a running diary.
   - `state/scratch.md` is disposable task memory.
   - `notes/fresh-workspace-handoff.md` is the short re-entry packet.
+  - `crates/norn-rs` is the Rust layout solver source and crate authority.
   - `web/norn-viewer` is the live React/WASM client package.
-  - `E:\Projects\norn-rs` is the Rust layout solver source lineage
-    used by the bundled WASM.
   - The .NET generator and MCP server are peripheral support surfaces for
     Obsidian exports, legacy inspection, package tooling, and benchmark
     fixtures.
@@ -50,7 +49,7 @@ invariants:
 data_flow:
   observe:
     - typed Epiphany graph state from host applications
-    - Rust solver source and exported WASM from the neighboring solver repo
+    - Rust solver source and exported WASM from `crates/norn-rs`
     - Obsidian vault notes only for legacy static graph generation
     - benchmark corpora and blind graph-truth probes
     - rendered viewer or SVG output as the user-visible truth layer
@@ -76,9 +75,10 @@ active_subgoals:
   - Keep persistent project state distilled and current.
 
 accepted_design:
-  - The React/WASM viewer backed by the Rust solver is the primary product
-    surface.
-  - The neighboring `norn-rs` crate is the solver authority.
+  - The Rust crate under `crates/norn-rs` is the primary product surface and
+    solver authority.
+  - The React/WASM viewer backed by the Rust solver is the primary inspection
+    client.
   - The root .NET generator and MCP server remain bridge/export/support
     surfaces.
   - Viewer motion is a presentation layer around the base layout anchor, not a
@@ -107,10 +107,10 @@ rejected_paths:
 
 current_status:
   summary: >
-    Persistent state machinery has been corrected to name Norn as a React/WASM
-    frontend for the Rust hybrid graph layout solver. The C# generator/MCP
-    surface is explicitly peripheral bridge/export tooling, not the repo's
-    center of gravity.
+    Persistent state machinery now names Norn as the in-repo Rust hybrid graph
+    layout solver. The React/WASM viewer and C# generator/MCP surface are
+    explicitly client windows and bridge/export tooling, not the repo's center
+    of gravity.
   next_action: >
     For the next feature or fix, rehydrate from this map, identify the owning
     surface, then verify against the solver, WASM bridge, viewer, or visible
@@ -131,7 +131,7 @@ verification:
       cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
       use_when: "Rust solver WASM or layout performance claims"
     - command: "cargo test"
-      cwd: "E:\\Projects\\norn-rs"
+      cwd: "E:\\Projects\\Norn"
       use_when: "Rust solver source or algorithm changes"
     - command: "dotnet build E:\\Projects\\Norn\\Norn.csproj"
       cwd: "E:\\Projects\\Norn"

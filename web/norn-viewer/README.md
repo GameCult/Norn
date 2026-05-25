@@ -43,11 +43,11 @@ This writes:
 
 ## Rust Solver WASM
 
-The viewer uses `norn-rs` as its layout authority. The bundled WASM is
+The viewer uses the in-repo `crates/norn-rs` crate as its layout authority. The bundled WASM is
 checked into `src/lib/solver-wasm-bytes.ts` so the package builds without a separate
 asset pipeline.
 
-Regenerate it after changing `E:\Projects\norn-rs`:
+Regenerate it after changing `E:\Projects\Norn\crates\norn-rs`:
 
 ```powershell
 npm run build:solver:wasm

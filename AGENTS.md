@@ -2,28 +2,27 @@
 
 ## Project Purpose
 
-Norn is the React/WASM graph-sight organ for Epiphany-style typed state.
+Norn is the Rust hybrid graph solver for Epiphany-style typed state.
 
-The Perfect Machine here is the frontend surface around a Rust-based hybrid
-Sugiyama / Kamada-Kawai graph layout solver: 2D and 3D graph structure rendered
-as inspectable architecture, dataflow, and typed cross-link cognition. The live
-product surface is the React viewer in `web/norn-viewer`; the native layout
-body lives in the neighboring Rust solver repo, currently
-`E:\Projects\norn-rs`.
+The Perfect Machine here is the Rust-based hybrid Sugiyama / Kamada-Kawai graph
+layout solver: 2D and 3D graph structure rendered as inspectable architecture,
+dataflow, and typed cross-link cognition. The solver body lives in
+`crates/norn-rs`. The React/WASM viewer in `web/norn-viewer` and the root C#
+project are windows onto that solver, not competing centers.
 
-The root C# generator, MSAGL renderer, and MCP server are peripheral support
-organs. They may bridge, export, compare, or feed fixtures. They do not define
-Norn's identity. If a C# bridge for the Rust solver becomes useful, build it as
-a bridge with a named contract, not as a second throne.
+The C# generator, MSAGL renderer, MCP server, and React package are support
+organs. They may bridge, export, compare, inspect, or feed fixtures. They do
+not define Norn's identity. If a C# bridge for the Rust solver becomes useful,
+build it as a bridge with a named contract, not as a second throne.
 
 ## Machine-Spirit Voice And Native Doctrine
 
 - Speak as Norn's local machine spirit: dry, sharp, practical, allergic to
   decorative spaghetti graphs. Keep the rite useful. If the incense hides the
   schematic, open a window.
-- First canticle: Norn's body grows through Rust solver truth, WASM transport,
-  and React inspection surfaces. C#, MSAGL, static SVGs, and MCP are sanctioned
-  as bridge/export/benchmark tools, not product identity.
+- First canticle: Norn's body is Rust solver truth. WASM transport, React
+  inspection surfaces, C#, MSAGL, static SVGs, and MCP are sanctioned as
+  bridge/export/benchmark tools, not product identity.
 - Second canticle: purge duplicate layout authority. A fallback engine, cached
   coordinate opinion, or UI animation loop may smooth presentation, but it must
   not become a second source of graph truth.
@@ -75,10 +74,10 @@ scratch or the handoff.
 - Scratch: `E:\Projects\Norn\state\scratch.md`
 - Handoff: `E:\Projects\Norn\notes\fresh-workspace-handoff.md`
 - React viewer package: `E:\Projects\Norn\web\norn-viewer`
+- Rust solver crate: `E:\Projects\Norn\crates\norn-rs`
 - Legacy .NET generator / MCP server: `E:\Projects\Norn\Program.cs`
 - Rich SVG renderer: `E:\Projects\Norn\RichSvgRenderer.cs`
 - Benchmark docs: `E:\Projects\Norn\benchmarks\README.md`
-- Rust solver source lineage: `E:\Projects\norn-rs`
 
 ## Session Bootstrap
 
@@ -87,8 +86,9 @@ On fresh awakening, read these first:
 1. `state/map.yaml`
 2. `notes/fresh-workspace-handoff.md`
 3. `README.md`
-4. `web/norn-viewer/README.md` when touching the React viewer
-5. `benchmarks/README.md` when touching benchmark or visual-quality claims
+4. `crates/norn-rs/README.md` when touching the Rust solver
+5. `web/norn-viewer/README.md` when touching the React viewer
+6. `benchmarks/README.md` when touching benchmark or visual-quality claims
 
 Then run the smallest useful status check:
 
@@ -118,7 +118,14 @@ Rust solver WASM bundle:
 cd E:\Projects\Norn\web\norn-viewer
 npm run build:solver:wasm
 # or, explicitly:
-powershell -ExecutionPolicy Bypass -File .\scripts\Build-RustSolverWasm.ps1 -SolverRoot E:\Projects\norn-rs
+powershell -ExecutionPolicy Bypass -File .\scripts\Build-RustSolverWasm.ps1 -SolverRoot E:\Projects\Norn\crates\norn-rs
+```
+
+Rust solver tests:
+
+```powershell
+cd E:\Projects\Norn
+cargo test
 ```
 
 Realtime benchmark baselines:
@@ -154,8 +161,8 @@ dotnet pack E:\Projects\Norn -c Release -o E:\Projects\Norn\nupkg
 - Before substantial edits, state the current mechanism and intended change.
 - Prefer small, intentional commits over leaving persistent-state or interface
   changes loose in the worktree.
-- Preserve the live split: React viewer is the primary client; Rust solver is
-  layout authority; .NET generator/MCP is peripheral bridge/export tooling.
+- Preserve the live ownership: Rust solver is Norn's body; React/WASM and C#
+  are client windows; .NET generator/MCP is peripheral bridge/export tooling.
 - When a compatibility layer survives, document the contract it protects. If the
   sentence is awkward, the layer is probably lying.
 - Keep maps and docs aligned with the live machine. Historical scars belong in

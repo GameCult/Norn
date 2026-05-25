@@ -1,16 +1,27 @@
 # Norn
 
-React/WASM graph viewer for Epiphany typed graph state, backed by a Rust-based
-hybrid Sugiyama / Kamada-Kawai 2D and 3D graph layout solver.
+Rust hybrid Sugiyama / Kamada-Kawai 2D and 3D graph layout solver for Epiphany
+typed graph state, with React/WASM and C# windows onto the solver.
 
-The live package is `web/norn-viewer`. It is what clients and agents
-should reach for when they want to render `architecture`, `dataflow`, and typed
-cross-links in a UI.
+The solver crate lives in `crates/norn-rs`. That is Norn's body. The React
+viewer in `web/norn-viewer` is the live browser inspection package for clients
+and agents that want to render `architecture`, `dataflow`, and typed cross-links
+in a UI.
 
-The older .NET generator, MSAGL SVG renderer, and MCP server still exist as support
-tools for note exports and legacy inspection. They are not competing client surfaces.
-Do not make consumers choose between engines like this repo is a sad little trade
-show booth.
+The .NET generator, MSAGL SVG renderer, and MCP server still exist as support
+tools for note exports, SDK/bridge work, and legacy inspection. They are windows
+onto the solver, not competing engines. Do not make consumers choose between
+truths like this repo is a sad little trade show booth.
+
+## Rust Solver
+
+```powershell
+cd E:\Projects\Norn
+cargo test
+```
+
+The crate is under `crates/norn-rs` and exports both a normal Rust library and a
+`cdylib` target for the WASM bridge. Solver algorithm work starts there.
 
 ## React Viewer
 

@@ -7,3 +7,5 @@ nupkg/
 .vscode/
 node_modules/
 dist/
+.voidbot/birth/
+.voidbot/logs/

@@ -9,7 +9,7 @@ Sugiyama / Kamada-Kawai graph layout solver: 2D and 3D graph structure rendered
 as inspectable architecture, dataflow, and typed cross-link cognition. The live
 product surface is the React viewer in `web/norn-viewer`; the native layout
 body lives in the neighboring Rust solver repo, currently
-`E:\Projects\epiphany-graph-rs`.
+`E:\Projects\norn-rs`.
 
 The root C# generator, MSAGL renderer, and MCP server are peripheral support
 organs. They may bridge, export, compare, or feed fixtures. They do not define
@@ -78,7 +78,7 @@ scratch or the handoff.
 - Legacy .NET generator / MCP server: `E:\Projects\Norn\Program.cs`
 - Rich SVG renderer: `E:\Projects\Norn\RichSvgRenderer.cs`
 - Benchmark docs: `E:\Projects\Norn\benchmarks\README.md`
-- Rust solver source lineage: `E:\Projects\epiphany-graph-rs`
+- Rust solver source lineage: `E:\Projects\norn-rs`
 
 ## Session Bootstrap
 
@@ -118,7 +118,7 @@ Rust solver WASM bundle:
 cd E:\Projects\Norn\web\norn-viewer
 npm run build:solver:wasm
 # or, explicitly:
-powershell -ExecutionPolicy Bypass -File .\scripts\Build-RustSolverWasm.ps1 -SolverRoot E:\Projects\epiphany-graph-rs
+powershell -ExecutionPolicy Bypass -File .\scripts\Build-RustSolverWasm.ps1 -SolverRoot E:\Projects\norn-rs
 ```
 
 Realtime benchmark baselines:

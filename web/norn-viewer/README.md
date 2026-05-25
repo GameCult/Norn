@@ -1,6 +1,6 @@
 # Norn Viewer
 
-React component package for browsing Epiphany's durable typed graph state.
+React component package for browsing durable typed graph state.
 
 This package is the live client surface. The viewer owns layout, motion, selection,
 inspection, and rendering policy; consuming apps provide typed graph state and coarse
@@ -43,11 +43,11 @@ This writes:
 
 ## Rust Solver WASM
 
-The viewer uses `epiphany-graph-rs` as its layout authority. The bundled WASM is
+The viewer uses `norn-rs` as its layout authority. The bundled WASM is
 checked into `src/lib/solver-wasm-bytes.ts` so the package builds without a separate
 asset pipeline.
 
-Regenerate it after changing `E:\Projects\epiphany-graph-rs`:
+Regenerate it after changing `E:\Projects\norn-rs`:
 
 ```powershell
 npm run build:solver:wasm

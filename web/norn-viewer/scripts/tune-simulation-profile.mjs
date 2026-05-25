@@ -60,7 +60,7 @@ const corpora = [
 const run = {
   generatedAtUtc: new Date().toISOString(),
   description:
-    "Smoke baseline for React viewer realtime simulation profile. Measures local JS simulation cost/error over synthetic expansions of mock Epiphany state.",
+    "Smoke baseline for React viewer realtime simulation profile. Measures local JS simulation cost/error over synthetic expansions of mock Norn state.",
   method: {
     iterations: 180,
     warmupIterations: 30,

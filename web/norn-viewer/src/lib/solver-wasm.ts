@@ -1,12 +1,12 @@
-import { epiphanyGraphSolverWasmBase64 } from "./solver-wasm-bytes";
+import { nornGraphSolverWasmBase64 } from "./solver-wasm-bytes";
 
 type SolverExports = {
   memory: WebAssembly.Memory;
-  epiphany_graph_alloc_f32: (count: number) => number;
-  epiphany_graph_dealloc_f32: (ptr: number, count: number) => void;
-  epiphany_graph_alloc_u32: (count: number) => number;
-  epiphany_graph_dealloc_u32: (ptr: number, count: number) => void;
-  epiphany_graph_layout_2d: (
+  norn_graph_alloc_f32: (count: number) => number;
+  norn_graph_dealloc_f32: (ptr: number, count: number) => void;
+  norn_graph_alloc_u32: (count: number) => number;
+  norn_graph_dealloc_u32: (ptr: number, count: number) => void;
+  norn_graph_layout_2d: (
     nodeWeightsPtr: number,
     nodeCount: number,
     edgePairsPtr: number,
@@ -34,14 +34,14 @@ export async function layoutWithRustSolver(input: RustGraphLayoutInput): Promise
   const solver = await loadSolver();
   const nodeCount = input.nodeWeights.length;
   const edgeCount = input.edgePairs.length / 2;
-  const nodeWeightsPtr = solver.epiphany_graph_alloc_f32(nodeCount);
-  const edgePairsPtr = solver.epiphany_graph_alloc_u32(input.edgePairs.length);
-  const outputPtr = solver.epiphany_graph_alloc_f32(nodeCount * 4);
+  const nodeWeightsPtr = solver.norn_graph_alloc_f32(nodeCount);
+  const edgePairsPtr = solver.norn_graph_alloc_u32(input.edgePairs.length);
+  const outputPtr = solver.norn_graph_alloc_f32(nodeCount * 4);
 
   try {
     new Float32Array(solver.memory.buffer, nodeWeightsPtr, nodeCount).set(input.nodeWeights);
     new Uint32Array(solver.memory.buffer, edgePairsPtr, input.edgePairs.length).set(input.edgePairs);
-    const status = solver.epiphany_graph_layout_2d(
+    const status = solver.norn_graph_layout_2d(
       nodeWeightsPtr,
       nodeCount,
       edgePairsPtr,
@@ -60,9 +60,9 @@ export async function layoutWithRustSolver(input: RustGraphLayoutInput): Promise
       new Float32Array(solver.memory.buffer, outputPtr, nodeCount * 4),
     );
   } finally {
-    solver.epiphany_graph_dealloc_f32(nodeWeightsPtr, nodeCount);
-    solver.epiphany_graph_dealloc_u32(edgePairsPtr, input.edgePairs.length);
-    solver.epiphany_graph_dealloc_f32(outputPtr, nodeCount * 4);
+    solver.norn_graph_dealloc_f32(nodeWeightsPtr, nodeCount);
+    solver.norn_graph_dealloc_u32(edgePairsPtr, input.edgePairs.length);
+    solver.norn_graph_dealloc_f32(outputPtr, nodeCount * 4);
   }
 }
 
@@ -71,11 +71,11 @@ async function loadSolver(): Promise<SolverExports> {
     const exports = result.instance.exports as Partial<SolverExports>;
     if (
       !(exports.memory instanceof WebAssembly.Memory) ||
-      typeof exports.epiphany_graph_alloc_f32 !== "function" ||
-      typeof exports.epiphany_graph_dealloc_f32 !== "function" ||
-      typeof exports.epiphany_graph_alloc_u32 !== "function" ||
-      typeof exports.epiphany_graph_dealloc_u32 !== "function" ||
-      typeof exports.epiphany_graph_layout_2d !== "function"
+      typeof exports.norn_graph_alloc_f32 !== "function" ||
+      typeof exports.norn_graph_dealloc_f32 !== "function" ||
+      typeof exports.norn_graph_alloc_u32 !== "function" ||
+      typeof exports.norn_graph_dealloc_u32 !== "function" ||
+      typeof exports.norn_graph_layout_2d !== "function"
     ) {
       throw new Error("Rust graph solver wasm is missing required exports.");
     }
@@ -90,8 +90,8 @@ function wasmBytes() {
   const maybeBuffer = (globalThis as { Buffer?: { from: (value: string, encoding: "base64") => { toString: (encoding: "binary") => string } } }).Buffer;
   const binary =
     typeof atob === "function"
-      ? atob(epiphanyGraphSolverWasmBase64)
-      : maybeBuffer?.from(epiphanyGraphSolverWasmBase64, "base64").toString("binary");
+      ? atob(nornGraphSolverWasmBase64)
+      : maybeBuffer?.from(nornGraphSolverWasmBase64, "base64").toString("binary");
   if (!binary) {
     throw new Error("No base64 decoder is available for the Rust graph solver wasm.");
   }

@@ -1,5 +1,5 @@
 param(
-    [string]$SolverRoot = "E:\Projects\epiphany-graph-rs"
+    [string]$SolverRoot = "E:\Projects\norn-rs"
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,12 +16,12 @@ finally {
     Pop-Location
 }
 
-$wasmPath = Join-Path $solverRootPath "target\wasm32-unknown-unknown\release\epiphany_graph_rs.wasm"
+$wasmPath = Join-Path $solverRootPath "target\wasm32-unknown-unknown\release\norn_rs.wasm"
 $outputPath = Join-Path $packageRoot "src\lib\solver-wasm-bytes.ts"
 $base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($wasmPath))
 
 @(
-    "export const epiphanyGraphSolverWasmBase64 =",
+    "export const nornGraphSolverWasmBase64 =",
     "  `"$base64`";"
 ) | Set-Content -LiteralPath $outputPath -Encoding UTF8
 

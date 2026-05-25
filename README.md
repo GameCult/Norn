@@ -216,7 +216,7 @@ That keeps structurally separated note graphs from vanishing just because they n
 
 The web-side viewer package lives under `web/norn-viewer/`.
 
-It consumes the typed Epiphany graph state shape directly:
+It consumes the typed Norn graph state shape directly:
 
 - `graphs.architecture`
 - `graphs.dataflow`

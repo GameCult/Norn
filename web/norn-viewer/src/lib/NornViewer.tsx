@@ -11,14 +11,14 @@ import {
 import { layoutNornGraphs } from "./layout";
 import { simulationProfilePresets } from "./simulation-profile";
 import type {
-  EpiphanyCodeRef,
+  NornCodeRef,
   NornGraphLink,
   NornGraphLayoutModeConfig,
   NornGraphMotionOptions,
   NornGraphPerformanceOptions,
   NornGraphPerformancePreset,
   NornViewerProps,
-  EpiphanyValidationIssue,
+  NornValidationIssue,
   GraphKey,
   GraphLayout,
   NodeEnvelope,
@@ -124,7 +124,7 @@ export function NornViewer({
   const [localSelection, setLocalSelection] = useState<ViewerSelection | null>(null);
   const [layouts, setLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
   const [dynamicLayouts, setDynamicLayouts] = useState<Record<GraphKey, GraphLayout> | null>(null);
-  const [issues, setIssues] = useState<EpiphanyValidationIssue[]>([]);
+  const [issues, setIssues] = useState<NornValidationIssue[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -1310,7 +1310,7 @@ function NodeDetails({
   }>;
   links: NornGraphLink[];
   onJump: (graphKey: GraphKey, nodeId: string) => void;
-  onCodeRefSelect: (codeRef: EpiphanyCodeRef) => void;
+  onCodeRefSelect: (codeRef: NornCodeRef) => void;
 }) {
   const crossLinkCount = graphKey === "architecture"
     ? links.filter((link) => link.architecture_node_id === node.id).length
@@ -1399,7 +1399,7 @@ function EdgeDetails({
 }: {
   edge: PositionedEdge;
   graphLabels: Record<GraphKey, string>;
-  onCodeRefSelect: (codeRef: EpiphanyCodeRef) => void;
+  onCodeRefSelect: (codeRef: NornCodeRef) => void;
 }) {
   return (
     <>
@@ -1519,8 +1519,8 @@ function CodeRefsList({
   codeRefs,
   onCodeRefSelect,
 }: {
-  codeRefs: EpiphanyCodeRef[];
-  onCodeRefSelect: (codeRef: EpiphanyCodeRef) => void;
+  codeRefs: NornCodeRef[];
+  onCodeRefSelect: (codeRef: NornCodeRef) => void;
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -2845,7 +2845,7 @@ function isArticleContentTarget(target: EventTarget | null) {
   }
 
   const articleContent = target.closest<HTMLElement>(
-    "[data-epiphany-article-content], .zyphos-spa-article",
+    "[data-norn-article-content], .zyphos-spa-article",
   );
   if (!articleContent) {
     return false;
@@ -2937,7 +2937,7 @@ function ellipsizeLine(text: string, maxChars: number) {
   return `${text.slice(0, Math.max(1, maxChars - 1))}…`;
 }
 
-function formatCodeRef(codeRef: EpiphanyCodeRef) {
+function formatCodeRef(codeRef: NornCodeRef) {
   const linePart =
     codeRef.start_line != null
       ? codeRef.end_line != null && codeRef.end_line !== codeRef.start_line

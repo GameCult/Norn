@@ -1,6 +1,6 @@
 export { NornViewer } from "./lib/NornViewer";
 export type {
-  EpiphanyCodeRef,
+  NornCodeRef,
   NornGraph,
   NornGraphEdge,
   NornGraphLink,
@@ -12,7 +12,7 @@ export type {
   NornGraphNode,
   NornGraphsState,
   NornViewerProps,
-  EpiphanyValidationIssue,
+  NornValidationIssue,
   GraphKey,
   NodeEnvelope,
   ViewportTransformEnvelope,

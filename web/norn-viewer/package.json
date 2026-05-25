@@ -2,7 +2,7 @@
   "name": "@gamecult/norn-viewer",
   "version": "0.1.0",
   "type": "module",
-  "description": "React graph viewer for Epiphany typed graph state.",
+  "description": "React/WASM graph viewer for typed graph state.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

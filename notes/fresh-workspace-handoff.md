@@ -22,7 +22,7 @@ When a new task starts, rehydrate from `state/map.yaml`, then choose the narrowe
 surface that owns the requested behavior:
 
 - React viewer work starts in `web/norn-viewer`.
-- Rust solver or algorithm work starts in `E:\Projects\epiphany-graph-rs`.
+- Rust solver or algorithm work starts in `E:\Projects\norn-rs`.
 - Static export, C# bridge, or MCP work starts in the root .NET project only
   after its bridge contract is named.
 - Visual-quality claims should pass through the benchmark harness or direct
@@ -30,6 +30,5 @@ surface that owns the requested behavior:
 
 ## Verification Notes
 
-This persistence correction also fixes stale solver-root documentation and the
-WASM build script default from `E:\Projects\norn-rs` to
-`E:\Projects\epiphany-graph-rs`.
+This persistence correction tracks the full rebrand: the solver root, frontend
+wrapper, package consumers, and embed paths should use Norn names.

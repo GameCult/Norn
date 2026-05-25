@@ -2,7 +2,7 @@ import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
 export type GraphKey = "architecture" | "dataflow";
 
-export interface EpiphanyCodeRef {
+export interface NornCodeRef {
   path: string;
   start_line?: number | null;
   end_line?: number | null;
@@ -17,7 +17,7 @@ export interface NornGraphNode {
   mechanism?: string | null;
   metaphor?: string | null;
   status?: string | null;
-  code_refs?: EpiphanyCodeRef[];
+  code_refs?: NornCodeRef[];
 }
 
 export interface NornGraphEdge {
@@ -27,7 +27,7 @@ export interface NornGraphEdge {
   id?: string | null;
   label?: string | null;
   mechanism?: string | null;
-  code_refs?: EpiphanyCodeRef[];
+  code_refs?: NornCodeRef[];
 }
 
 export interface NornGraph {
@@ -39,7 +39,7 @@ export interface NornGraphLink {
   dataflow_node_id: string;
   architecture_node_id: string;
   relationship?: string | null;
-  code_refs?: EpiphanyCodeRef[];
+  code_refs?: NornCodeRef[];
 }
 
 export interface NornGraphsState {
@@ -76,7 +76,7 @@ export interface NornGraphMotionOptions {
   emitNodeEnvelopes?: boolean;
 }
 
-export interface EpiphanyValidationIssue {
+export interface NornValidationIssue {
   scope: string;
   message: string;
 }
@@ -153,7 +153,7 @@ export interface NornViewerProps {
   onViewportTargetComplete?: (selection: ViewerSelection) => void;
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
-    codeRef: EpiphanyCodeRef,
+    codeRef: NornCodeRef,
     context: {
       graphKey: GraphKey;
       selection: ViewerSelection | null;

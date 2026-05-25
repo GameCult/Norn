@@ -129,7 +129,7 @@ console.log(`Wrote ${convergenceSvgPath}`);
 
 async function loadSolver() {
   const source = await fs.readFile(wasmBytesPath, "utf8");
-  const match = source.match(/epiphanyGraphSolverWasmBase64\s*=\s*"([^"]+)"/);
+  const match = source.match(/nornGraphSolverWasmBase64\s*=\s*"([^"]+)"/);
   if (!match) {
     throw new Error(`Could not read embedded solver WASM from ${wasmBytesPath}`);
   }
@@ -138,11 +138,11 @@ async function loadSolver() {
   const exports = result.instance.exports;
   for (const name of [
     "memory",
-    "epiphany_graph_alloc_f32",
-    "epiphany_graph_dealloc_f32",
-    "epiphany_graph_alloc_u32",
-    "epiphany_graph_dealloc_u32",
-    "epiphany_graph_layout_2d",
+    "norn_graph_alloc_f32",
+    "norn_graph_dealloc_f32",
+    "norn_graph_alloc_u32",
+    "norn_graph_dealloc_u32",
+    "norn_graph_layout_2d",
   ]) {
     if (!(name in exports)) {
       throw new Error(`Rust graph solver wasm is missing ${name}`);
@@ -170,14 +170,14 @@ function measureCandidate(graph, config) {
 function layoutGraph(graph, config) {
   const nodeCount = graph.nodeWeights.length;
   const edgeCount = graph.edgePairs.length / 2;
-  const nodeWeightsPtr = solver.epiphany_graph_alloc_f32(nodeCount);
-  const edgePairsPtr = solver.epiphany_graph_alloc_u32(graph.edgePairs.length);
-  const outputPtr = solver.epiphany_graph_alloc_f32(nodeCount * 4);
+  const nodeWeightsPtr = solver.norn_graph_alloc_f32(nodeCount);
+  const edgePairsPtr = solver.norn_graph_alloc_u32(graph.edgePairs.length);
+  const outputPtr = solver.norn_graph_alloc_f32(nodeCount * 4);
 
   try {
     new Float32Array(solver.memory.buffer, nodeWeightsPtr, nodeCount).set(graph.nodeWeights);
     new Uint32Array(solver.memory.buffer, edgePairsPtr, graph.edgePairs.length).set(graph.edgePairs);
-    const status = solver.epiphany_graph_layout_2d(
+    const status = solver.norn_graph_layout_2d(
       nodeWeightsPtr,
       nodeCount,
       edgePairsPtr,
@@ -199,9 +199,9 @@ function layoutGraph(graph, config) {
     }
     return { coordinates };
   } finally {
-    solver.epiphany_graph_dealloc_f32(nodeWeightsPtr, nodeCount);
-    solver.epiphany_graph_dealloc_u32(edgePairsPtr, graph.edgePairs.length);
-    solver.epiphany_graph_dealloc_f32(outputPtr, nodeCount * 4);
+    solver.norn_graph_dealloc_f32(nodeWeightsPtr, nodeCount);
+    solver.norn_graph_dealloc_u32(edgePairsPtr, graph.edgePairs.length);
+    solver.norn_graph_dealloc_f32(outputPtr, nodeCount * 4);
   }
 }
 

@@ -36,7 +36,7 @@ export function App() {
             textTransform: "uppercase",
           }}
         >
-          EpiphanyAgent Graph Mock
+          Norn Graph Mock
         </div>
         <div style={{ maxWidth: 960, display: "grid", gap: 8 }}>
           <h1
@@ -59,7 +59,7 @@ export function App() {
               lineHeight: 1.55,
             }}
           >
-            This demo uses mocked Epiphany state shaped like the current protocol:
+            This demo uses mocked Norn state shaped like the current protocol:
             architecture graph, dataflow graph, and typed cross-links between them.
             Zoom in and the details stop hiding under the floorboards.
           </p>

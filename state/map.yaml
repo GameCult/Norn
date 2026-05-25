@@ -35,7 +35,7 @@ invariants:
   - `state/scratch.md` is disposable task memory.
   - `notes/fresh-workspace-handoff.md` is the short re-entry packet.
   - `web/norn-viewer` is the live React/WASM client package.
-  - `E:\Projects\epiphany-graph-rs` is the Rust layout solver source lineage
+  - `E:\Projects\norn-rs` is the Rust layout solver source lineage
     used by the bundled WASM.
   - The .NET generator and MCP server are peripheral support surfaces for
     Obsidian exports, legacy inspection, package tooling, and benchmark
@@ -78,7 +78,7 @@ active_subgoals:
 accepted_design:
   - The React/WASM viewer backed by the Rust solver is the primary product
     surface.
-  - The neighboring `epiphany-graph-rs` crate is the solver authority.
+  - The neighboring `norn-rs` crate is the solver authority.
   - The root .NET generator and MCP server remain bridge/export/support
     surfaces.
   - Viewer motion is a presentation layer around the base layout anchor, not a
@@ -131,7 +131,7 @@ verification:
       cwd: "E:\\Projects\\Norn\\web\\norn-viewer"
       use_when: "Rust solver WASM or layout performance claims"
     - command: "cargo test"
-      cwd: "E:\\Projects\\epiphany-graph-rs"
+      cwd: "E:\\Projects\\norn-rs"
       use_when: "Rust solver source or algorithm changes"
     - command: "dotnet build E:\\Projects\\Norn\\Norn.csproj"
       cwd: "E:\\Projects\\Norn"

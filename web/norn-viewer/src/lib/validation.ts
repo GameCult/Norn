@@ -1,12 +1,12 @@
 import type {
   NornGraph,
   NornGraphsState,
-  EpiphanyValidationIssue,
+  NornValidationIssue,
   GraphKey,
 } from "./types";
 
-export function validateNornGraphsState(state: NornGraphsState): EpiphanyValidationIssue[] {
-  const issues: EpiphanyValidationIssue[] = [];
+export function validateNornGraphsState(state: NornGraphsState): NornValidationIssue[] {
+  const issues: NornValidationIssue[] = [];
   const architectureIds = validateGraph("architecture", state.architecture, issues);
   const dataflowIds = validateGraph("dataflow", state.dataflow, issues);
   const linkPairs = new Set<string>();
@@ -52,7 +52,7 @@ export function validateNornGraphsState(state: NornGraphsState): EpiphanyValidat
 function validateGraph(
   graphKey: GraphKey,
   graph: NornGraph,
-  issues: EpiphanyValidationIssue[],
+  issues: NornValidationIssue[],
 ): Set<string> {
   const nodeIds = new Set<string>();
   const edgeIds = new Set<string>();

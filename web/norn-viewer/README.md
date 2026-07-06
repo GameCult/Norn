@@ -131,6 +131,27 @@ tune the viewer-owned model:
 `emitNodeEnvelopes` dispatches `norn-node-envelopes` from the viewport for
 backdrops that want node-aware effects without owning graph physics.
 
+## Viewport-Derived Focus
+
+`focusSelection` does not create a second graph-selection authority. When it is
+enabled, node focus is derived from the active viewport transform: wheel, drag,
+reset, node clicks, and `viewportTarget` navigation all flow through the same
+transform commit path. Programmatic navigation means "move the viewport toward
+this node"; the resulting node selection is the selection mirrored from that
+viewport-derived focus.
+
+The viewport element exposes this as an inspection probe:
+
+- `data-norn-focus-authority="viewport"`
+- `data-norn-derived-focus-node-id`
+- `data-norn-selected-node-id`
+
+The existing `norn-viewport-transform` event also includes
+`detail.derivedFocus`, with the viewport-derived node id, whether selection
+mirroring is enabled, and the current selected node id. Use that event when a
+host backdrop, trace, or agent wants to compare viewport focus with graph/user
+selection without guessing which layer owns the decision.
+
 ## Performance
 
 The viewer is tuned as a realtime machine. Clients choose a simulation budget in

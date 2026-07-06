@@ -321,6 +321,19 @@ export function NornViewer({
   const visibleLayouts = dynamicLayouts ?? layouts;
   const activeLayout = visibleLayouts?.[activeGraphKey] ?? null;
   const activeTransform = transforms[activeGraphKey];
+  const activeSelectedNodeId =
+    selection?.kind === "node" && selection.graphKey === activeGraphKey
+      ? selection.nodeId
+      : null;
+  const viewportDerivedFocusNode =
+    activeLayout && viewportSize.width > 0 && viewportSize.height > 0
+      ? nodeNearestViewportCenter(
+          activeLayout.nodes,
+          activeTransform,
+          viewportSize.width,
+          viewportSize.height,
+        )
+      : null;
 
   useEffect(() => {
     viewportFocusSelectionRef.current = {
@@ -380,10 +393,23 @@ export function NornViewer({
         width: viewportSize.width,
         height: viewportSize.height,
         bounds,
+        derivedFocus: {
+          authority: "viewport",
+          enabled: focusSelection,
+          nodeId: nodeNearestViewportCenter(
+            layout.nodes,
+            transform,
+            viewportSize.width,
+            viewportSize.height,
+          )?.id ?? null,
+          selectedNodeId: activeSelectedNodeId,
+        },
       },
     }));
   }, [
     activeGraphKey,
+    activeSelectedNodeId,
+    focusSelection,
     transforms,
     visibleLayouts,
     viewportSize.height,
@@ -788,6 +814,9 @@ export function NornViewer({
               event.stopPropagation();
             }
           }}
+          data-norn-focus-authority="viewport"
+          data-norn-derived-focus-node-id={viewportDerivedFocusNode?.id ?? ""}
+          data-norn-selected-node-id={activeSelectedNodeId ?? ""}
           style={{
             position: "relative",
             minHeight: overlayPanels ? "100vh" : 540,

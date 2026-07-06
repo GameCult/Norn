@@ -114,6 +114,16 @@ export type ViewportTransformEnvelope = {
     width: number;
     height: number;
   };
+  /**
+   * Inspectable viewport-focus probe. This is derived from the current
+   * transform and viewport size; it is not a separate selection owner.
+   */
+  derivedFocus: {
+    authority: "viewport";
+    enabled: boolean;
+    nodeId: string | null;
+    selectedNodeId: string | null;
+  };
 };
 
 export interface NornViewerProps {
@@ -134,8 +144,19 @@ export interface NornViewerProps {
   overlayPanels?: boolean;
   viewportBackdrop?: ReactNode;
   viewportBackground?: CSSProperties["background"];
+  /**
+   * When true, the viewer derives node focus from viewport geometry and mirrors
+   * that focus into selection. User and programmatic navigation must move the
+   * viewport through the same transform path instead of writing a second focus
+   * truth.
+   */
   focusSelection?: boolean;
   selectionFocusMode?: "preview" | "article";
+  /**
+   * Programmatic node navigation request. The viewer treats this as a viewport
+   * move target; completion reports the selection that resulted from the
+   * viewport-derived focus path.
+   */
   viewportTarget?: ViewerSelection | null;
   expandedNode?: {
     graphKey: GraphKey;
@@ -151,6 +172,11 @@ export interface NornViewerProps {
   };
   onExpandedNodeClick?: MouseEventHandler<HTMLElement>;
   onViewportTargetComplete?: (selection: ViewerSelection) => void;
+  /**
+   * Graph/user selection callback. With focusSelection enabled, viewport-derived
+   * focus may update this after wheel, drag, reset, node click, or viewportTarget
+   * navigation commits a transform.
+   */
   onSelectionChange?: (selection: ViewerSelection | null) => void;
   onCodeRefSelect?: (
     codeRef: NornCodeRef,

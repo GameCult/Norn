@@ -15,7 +15,7 @@
       "requestSchema": "gamecult.eve.plugin_abi.request.v1",
       "responseSchema": "gamecult.eve.plugin_abi.response.v1",
       "operations": ["describe", "validate", "project", "measure"],
-      "commandEnvelope": "gamecult.eve.command.v1",
+      "commandEnvelope": "gamecult.eve.command_invocation.v1",
       "receiptSchema": "gamecult.eve.command_receipt.v1",
       "stateAuthority": "proposes-plugin-state-only-provider-accepts",
       "launch": { "artifact": "cargo:norn-eve-plugin", "command": "norn-eve-plugin" },
@@ -33,4 +33,3 @@
   "commands": ["graph.node.activate", "graph.focus"],
   "fixtures": ["sai-nested-norn"]
 }
-

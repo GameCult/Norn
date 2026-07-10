@@ -3,6 +3,8 @@
   "pluginId": "norn.graph",
   "title": "Norn Graph",
   "owner": "Norn",
+  "splitTarget": "Norn",
+  "graduationTrigger": "Graduated: Norn owns graph semantics, fixtures, ABI sidecar, and release lifecycle.",
   "componentKinds": ["embed.norn"],
   "commands": [
     { "command": "graph.node.activate", "schema": "norn.graph.command.v1", "effect": "activate-node" },
@@ -19,7 +21,7 @@
       "requestSchema": "gamecult.eve.plugin_abi.request.v1",
       "responseSchema": "gamecult.eve.plugin_abi.response.v1",
       "operations": ["describe", "validate", "project", "measure"],
-      "commandEnvelope": "gamecult.eve.command.v1",
+      "commandEnvelope": "gamecult.eve.command_invocation.v1",
       "receiptSchema": "gamecult.eve.command_receipt.v1",
       "stateAuthority": "proposes-plugin-state-only-provider-accepts",
       "launch": {
@@ -51,4 +53,3 @@
     "optionalCapabilities": ["graph.node.activate", "graph.pan", "graph.zoom"]
   }
 }
-

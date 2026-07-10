@@ -46,6 +46,13 @@
       "path": "plugins/norn-graph.plugin-abi-fixture.json",
       "role": "optional-nested-placement-evidence",
       "authority": "Norn owns graph semantics; Sai supplies only an embed.norn composition slot."
+    },
+    {
+      "fixtureId": "sai-nested-norn-document",
+      "schema": "norn.graph.document.v1",
+      "path": "plugins/fixtures/sai-nested-norn.graph.json",
+      "role": "nested-graph-document",
+      "authority": "Norn owns graph content and layout semantics."
     }
   ],
   "abiFixtures": ["plugins/norn-graph.plugin-abi-fixture.json"],

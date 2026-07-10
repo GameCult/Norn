@@ -32,5 +32,5 @@
   "schemas": ["norn.graph.document.v1", "norn.graph.layout_request.v1", "norn.graph.layout_result.v1"],
   "componentKinds": ["embed.norn"],
   "commands": ["graph.node.activate", "graph.focus"],
-  "fixtures": ["sai-nested-norn"]
+  "fixtures": ["sai-nested-norn", "sai-nested-norn-document"]
 }

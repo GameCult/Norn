@@ -1,0 +1,21 @@
+{
+  "schema": "norn.graph.document.v1",
+  "documentId": "cultmesh://norn/graphs/sai-nested-norn",
+  "layout": {
+    "mode": "norn.2d",
+    "iterations": 220,
+    "rankGap": 150,
+    "nodeGap": 88,
+    "edgeLength": 132
+  },
+  "nodes": [
+    { "id": "hub", "label": "Hub", "target": "hub", "x": 0.2, "y": 0.2, "current": true },
+    { "id": "eve", "label": "Eve", "target": "eve", "x": 0.72, "y": 0.24 },
+    { "id": "sai", "label": "Sai", "target": "sai", "x": 0.48, "y": 0.55 }
+  ],
+  "edges": [
+    { "source": "hub", "target": "eve" },
+    { "source": "hub", "target": "sai" },
+    { "source": "sai", "target": "eve" }
+  ]
+}

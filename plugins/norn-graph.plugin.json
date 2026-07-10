@@ -1,0 +1,54 @@
+{
+  "schema": "gamecult.eve.plugin.v1",
+  "pluginId": "norn.graph",
+  "title": "Norn Graph",
+  "owner": "Norn",
+  "componentKinds": ["embed.norn"],
+  "commands": [
+    { "command": "graph.node.activate", "schema": "norn.graph.command.v1", "effect": "activate-node" },
+    { "command": "graph.focus", "schema": "norn.graph.command.v1", "effect": "focus-graph" }
+  ],
+  "runtime": {
+    "invocationModel": "executable-sidecar",
+    "contract": "gamecult.eve.plugin_abi.v1",
+    "transports": ["stdio"],
+    "authority": ["renderer-independent", "no-provider-state-mutation", "provider-accepts-or-denies-commands"],
+    "sidecar": {
+      "processKind": "long-running-daemon",
+      "protocol": "stdio-ndjson",
+      "requestSchema": "gamecult.eve.plugin_abi.request.v1",
+      "responseSchema": "gamecult.eve.plugin_abi.response.v1",
+      "operations": ["describe", "validate", "project", "measure"],
+      "commandEnvelope": "gamecult.eve.command.v1",
+      "receiptSchema": "gamecult.eve.command_receipt.v1",
+      "stateAuthority": "proposes-plugin-state-only-provider-accepts",
+      "launch": {
+        "artifact": "cargo:norn-eve-plugin",
+        "command": "norn-eve-plugin"
+      },
+      "stdio": {
+        "encoding": "utf-8",
+        "framing": "ndjson",
+        "ordering": "sequential",
+        "blankLines": "ignored",
+        "diagnostics": "stderr"
+      }
+    }
+  },
+  "stateSchemas": ["norn.graph.document.v1", "norn.graph.layout_request.v1", "norn.graph.layout_result.v1"],
+  "fixtures": [
+    {
+      "fixtureId": "sai-nested-norn",
+      "schema": "gamecult.eve.plugin_abi_fixture.v1",
+      "path": "plugins/norn-graph.plugin-abi-fixture.json",
+      "role": "optional-nested-placement-evidence",
+      "authority": "Norn owns graph semantics; Sai supplies only an embed.norn composition slot."
+    }
+  ],
+  "abiFixtures": ["plugins/norn-graph.plugin-abi-fixture.json"],
+  "capabilities": {
+    "requires": ["embed.norn"],
+    "optionalCapabilities": ["graph.node.activate", "graph.pan", "graph.zoom"]
+  }
+}
+

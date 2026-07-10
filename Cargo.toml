@@ -1,3 +1,3 @@
 [workspace]
-members = ["crates/norn-rs"]
+members = ["crates/norn-rs", "crates/norn-eve-plugin"]
 resolver = "3"

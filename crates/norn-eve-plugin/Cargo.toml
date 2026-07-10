@@ -1,0 +1,13 @@
+[package]
+name = "norn-eve-plugin"
+version = "0.1.0"
+edition = "2024"
+description = "Norn graph capability sidecar for the Eve plugin ABI."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/GameCult/Norn"
+
+[dependencies]
+norn-rs = { path = "../norn-rs" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+

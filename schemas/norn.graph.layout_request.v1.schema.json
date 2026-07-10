@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "norn.graph.layout_request.v1",
+  "type": "object",
+  "required": ["schema", "graph"],
+  "properties": {
+    "schema": { "const": "norn.graph.layout_request.v1" },
+    "graph": { "$ref": "norn.graph.document.v1" },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "iterations": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "rankGap": { "type": "number", "exclusiveMinimum": 0 },
+        "nodeGap": { "type": "number", "exclusiveMinimum": 0 },
+        "edgeLength": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+

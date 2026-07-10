@@ -1,0 +1,66 @@
+{
+  "schema": "gamecult.eve.plugin_abi_fixture.v1",
+  "fixtureId": "norn-graph-owner-sidecar",
+  "pluginId": "norn.graph",
+  "ownerRepo": "Norn",
+  "contract": "gamecult.eve.plugin_abi.v1",
+  "requestSchema": "gamecult.eve.plugin_abi.request.v1",
+  "responseSchema": "gamecult.eve.plugin_abi.response.v1",
+  "sourceFixture": "sai-nested-norn",
+  "sourceFixtureRole": "optional-nested-placement-evidence",
+  "authority": "Norn owns graph semantics; the Sai-derived component proves only nested composition.",
+  "operations": [
+    {
+      "operation": "describe",
+      "input": {},
+      "expect": {
+        "pluginId": "norn.graph",
+        "componentKinds": ["embed.norn"],
+        "commands": ["graph.node.activate", "graph.focus"],
+        "capabilities": ["embed.norn", "graph.node.activate"]
+      }
+    },
+    {
+      "operation": "validate",
+      "input": { "componentKinds": ["embed.norn", "embed.tex", "vn.stage"] },
+      "expect": {
+        "acceptedComponentKinds": ["embed.norn"],
+        "rejectedComponentKinds": ["embed.tex", "vn.stage"],
+        "requiredCapabilities": ["embed.norn"]
+      }
+    },
+    {
+      "operation": "project",
+      "input": {
+        "component": { "kind": "embed.norn", "props": { "documentId": "sai.whiteboard.graph" } },
+        "graph": {
+          "schema": "norn.graph.document.v1",
+          "nodes": [{ "id": "arrival" }, { "id": "choice" }, { "id": "aftermath" }],
+          "edges": [{ "source": "arrival", "target": "choice" }, { "source": "choice", "target": "aftermath" }]
+        }
+      },
+      "expect": {
+        "projectionKind": "embedded-semantic-surface",
+        "ownedComponentKinds": ["embed.norn"],
+        "semanticOwner": "Norn"
+      }
+    },
+    {
+      "operation": "measure",
+      "input": {
+        "graph": {
+          "schema": "norn.graph.document.v1",
+          "nodes": [{ "id": "arrival" }, { "id": "choice" }, { "id": "aftermath" }],
+          "edges": [{ "source": "arrival", "target": "choice" }, { "source": "choice", "target": "aftermath" }],
+          "layout": { "iterations": 40 }
+        }
+      },
+      "expect": {
+        "measurementKind": "graph-layout-metrics",
+        "measurementOutputs": ["nodeBounds", "edgeRoutes", "viewportBounds"],
+        "preservesProviderAuthority": true
+      }
+    }
+  ]
+}
+

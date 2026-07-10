@@ -2813,6 +2813,11 @@ pub extern "C" fn norn_graph_alloc(len: usize) -> *mut u8 {
 }
 
 /// Release a pointer previously returned by [`norn_graph_alloc`].
+///
+/// # Safety
+///
+/// `ptr` must have been returned by [`norn_graph_alloc`] with the same `len`
+/// and must not have been released previously.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn norn_graph_dealloc(ptr: *mut u8, len: usize) {
     if ptr.is_null() || len == 0 {
@@ -2834,6 +2839,11 @@ pub extern "C" fn norn_graph_alloc_f32(count: usize) -> *mut f32 {
 }
 
 /// Release `f32` slots previously returned by [`norn_graph_alloc_f32`].
+///
+/// # Safety
+///
+/// `ptr` must have been returned by [`norn_graph_alloc_f32`] with the same
+/// `count` and must not have been released previously.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn norn_graph_dealloc_f32(ptr: *mut f32, count: usize) {
     if ptr.is_null() || count == 0 {
@@ -2855,6 +2865,11 @@ pub extern "C" fn norn_graph_alloc_u32(count: usize) -> *mut u32 {
 }
 
 /// Release `u32` slots previously returned by [`norn_graph_alloc_u32`].
+///
+/// # Safety
+///
+/// `ptr` must have been returned by [`norn_graph_alloc_u32`] with the same
+/// `count` and must not have been released previously.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn norn_graph_dealloc_u32(ptr: *mut u32, count: usize) {
     if ptr.is_null() || count == 0 {
@@ -2875,6 +2890,12 @@ pub unsafe extern "C" fn norn_graph_dealloc_u32(ptr: *mut u32, count: usize) {
 ///
 /// Output tuple per node is `(x, y, rank, order)` sorted by node index.
 /// Returns `0` on success and a negative value for malformed input.
+///
+/// # Safety
+///
+/// Input pointers must address the documented number of readable elements and
+/// `output_ptr` must address `node_count * 4` writable `f32` slots. The pointed
+/// memory must remain valid and non-overlapping for the duration of the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn norn_graph_layout_2d(
     node_weights_ptr: *const f32,
@@ -2917,11 +2938,13 @@ pub unsafe extern "C" fn norn_graph_layout_2d(
         graph.add_edge(NodeId(source), NodeId(target));
     }
 
-    let mut config = LayoutConfig::default();
-    config.iterations = iterations.max(1);
-    config.rank_gap = rank_gap.max(1.0);
-    config.node_gap = node_gap.max(1.0);
-    config.edge_length = edge_length.max(1.0);
+    let config = LayoutConfig {
+        iterations: iterations.max(1),
+        rank_gap: rank_gap.max(1.0),
+        node_gap: node_gap.max(1.0),
+        edge_length: edge_length.max(1.0),
+        ..LayoutConfig::default()
+    };
     let result = layout(&graph, &config);
 
     for node in result.nodes {

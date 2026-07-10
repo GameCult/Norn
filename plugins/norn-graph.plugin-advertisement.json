@@ -1,0 +1,36 @@
+{
+  "schema": "gamecult.eve.plugin_advertisement.v1",
+  "pluginId": "norn.graph",
+  "ownerService": "norn",
+  "version": "0.1.0",
+  "manifestAddress": "file://plugins/norn-graph.plugin.json",
+  "runtime": {
+    "invocationModel": "executable-sidecar",
+    "contract": "gamecult.eve.plugin_abi.v1",
+    "transports": ["stdio"],
+    "authority": ["renderer-independent", "no-provider-state-mutation", "provider-accepts-or-denies-commands"],
+    "sidecar": {
+      "processKind": "long-running-daemon",
+      "protocol": "stdio-ndjson",
+      "requestSchema": "gamecult.eve.plugin_abi.request.v1",
+      "responseSchema": "gamecult.eve.plugin_abi.response.v1",
+      "operations": ["describe", "validate", "project", "measure"],
+      "commandEnvelope": "gamecult.eve.command.v1",
+      "receiptSchema": "gamecult.eve.command_receipt.v1",
+      "stateAuthority": "proposes-plugin-state-only-provider-accepts",
+      "launch": { "artifact": "cargo:norn-eve-plugin", "command": "norn-eve-plugin" },
+      "stdio": {
+        "encoding": "utf-8",
+        "framing": "ndjson",
+        "ordering": "sequential",
+        "blankLines": "ignored",
+        "diagnostics": "stderr"
+      }
+    }
+  },
+  "schemas": ["norn.graph.document.v1", "norn.graph.layout_request.v1", "norn.graph.layout_result.v1"],
+  "componentKinds": ["embed.norn"],
+  "commands": ["graph.node.activate", "graph.focus"],
+  "fixtures": ["sai-nested-norn"]
+}
+

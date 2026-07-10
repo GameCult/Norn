@@ -14,9 +14,9 @@ objective:
     architecture graphs, dataflow graphs, and cross-links rendered through
     React/WASM and C# windows.
   current: >
-    Keep Norn coherent as the in-repo Rust graph solver while treating the
-    React/WASM viewer and root C# generator/MCP server as inspection, bridge,
-    export, and benchmark surfaces only.
+    Publish Norn graph semantics through a runtime-independent Eve plugin
+    sidecar while keeping the Rust solver authoritative and treating renderers
+    as projections rather than semantic owners.
 
 constraints:
   - Keep persistent state small enough to rehydrate quickly.
@@ -35,6 +35,9 @@ invariants:
   - `state/scratch.md` is disposable task memory.
   - `notes/fresh-workspace-handoff.md` is the short re-entry packet.
   - `crates/norn-rs` is the Rust layout solver source and crate authority.
+  - `crates/norn-eve-plugin` owns Eve plugin ABI dispatch and stdio framing.
+  - Provider state remains provider-owned; the plugin returns semantic and
+    measurement results but cannot commit provider commands or receipts.
   - `web/norn-viewer` is the live React/WASM client package.
   - The .NET generator and MCP server are peripheral support surfaces for
     Obsidian exports, legacy inspection, package tooling, and benchmark
@@ -59,12 +62,16 @@ data_flow:
     - treat browser motion as presentation around the solver anchor
     - render graph partitions, cross-links, labels, selection, and detail panes
     - measure visual usefulness through benchmark artifacts when tuning
+    - dispatch typed Eve plugin requests and route graph measurement to the
+      Rust solver without importing any provider or renderer implementation
   output:
     - React `NornViewer` package exports
     - embedded solver WASM bytes under `web/norn-viewer/src/lib`
     - demo build artifacts under `web/norn-viewer/dist`
     - static SVG/JSON generator output under requested output directories
     - benchmark baselines and review artifacts under `benchmarks/` or `out/`
+    - Norn-owned plugin advertisements, ABI fixtures, and schemas
+    - sequential NDJSON plugin responses over stdio
 
 active_subgoals:
   - Keep the React/WASM viewer API stable and coarse.
@@ -73,6 +80,8 @@ active_subgoals:
   - Use benchmark harnesses before claiming visual usefulness or realtime budget
     improvement.
   - Keep persistent project state distilled and current.
+  - Add CultMesh transport as another carrier for the same typed request and
+    response model when the daemon host contract is ready.
 
 accepted_design:
   - The Rust crate under `crates/norn-rs` is the primary product surface and
@@ -85,6 +94,8 @@ accepted_design:
     second durable graph truth.
   - Benchmark probes should measure whether rendered graphs improve graph-truth
     recovery, not whether they look impressive.
+  - The Eve sidecar is transport and ABI ownership around `norn-rs`; it is not
+    a Unity, web, Sai, or provider-specific plugin host.
 
 rejected_paths:
   - name: dual_client_surface
@@ -107,10 +118,10 @@ rejected_paths:
 
 current_status:
   summary: >
-    Persistent state machinery now names Norn as the in-repo Rust hybrid graph
-    layout solver. The React/WASM viewer and C# generator/MCP surface are
-    explicitly client windows and bridge/export tooling, not the repo's center
-    of gravity.
+    Norn owns its first executable Eve graph plugin sidecar. The sidecar
+    validates and measures graph documents through the Rust solver over a
+    bounded NDJSON stdio protocol; React/WASM, C#, Unity, and other runtimes
+    remain consumers that project the result.
   next_action: >
     For the next feature or fix, rehydrate from this map, identify the owning
     surface, then verify against the solver, WASM bridge, viewer, or visible
@@ -133,6 +144,9 @@ verification:
     - command: "cargo test"
       cwd: "E:\\Projects\\Norn"
       use_when: "Rust solver source or algorithm changes"
+    - command: "cargo clippy --workspace --all-targets -- -D warnings"
+      cwd: "E:\\Projects\\Norn"
+      use_when: "Rust solver or Eve plugin sidecar changes"
     - command: "dotnet build E:\\Projects\\Norn\\Norn.csproj"
       cwd: "E:\\Projects\\Norn"
       use_when: "Peripheral C# bridge, export, or MCP changes"

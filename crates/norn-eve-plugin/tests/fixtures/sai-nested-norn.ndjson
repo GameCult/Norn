@@ -1,0 +1,3 @@
+{"schema":"gamecult.eve.plugin_abi.request.v1","pluginId":"norn.graph","operation":"project","requestId":"sai-nested-project","input":{"component":{"kind":"embed.norn","props":{"documentId":"sai.whiteboard.graph"}},"graph":{"schema":"norn.graph.document.v1","nodes":[{"id":"arrival"},{"id":"choice"},{"id":"aftermath"}],"edges":[{"source":"arrival","target":"choice"},{"source":"choice","target":"aftermath"}]}}}
+{"schema":"gamecult.eve.plugin_abi.request.v1","pluginId":"norn.graph","operation":"measure","requestId":"sai-nested-measure","input":{"graph":{"schema":"norn.graph.document.v1","nodes":[{"id":"arrival"},{"id":"choice"},{"id":"aftermath"}],"edges":[{"source":"arrival","target":"choice"},{"source":"choice","target":"aftermath"}],"layout":{"iterations":40}}}}
+

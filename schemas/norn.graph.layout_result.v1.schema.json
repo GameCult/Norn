@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "norn.graph.layout_result.v1",
+  "type": "object",
+  "required": ["schema", "nodeBounds", "edgeRoutes", "viewportBounds"],
+  "properties": {
+    "schema": { "const": "norn.graph.layout_result.v1" },
+    "nodeBounds": { "type": "array", "items": { "type": "object" } },
+    "edgeRoutes": { "type": "array", "items": { "type": "object" } },
+    "viewportBounds": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number" }, "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 }, "height": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "additionalProperties": true
+}
+

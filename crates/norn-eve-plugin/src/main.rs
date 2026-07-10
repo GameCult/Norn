@@ -8,6 +8,7 @@ fn main() -> io::Result<()> {
     let mut stdout = io::stdout().lock();
     for line in stdin.lock().lines() {
         let line = line?;
+        let line = line.trim_start_matches('\u{feff}');
         if line.trim().is_empty() {
             continue;
         }

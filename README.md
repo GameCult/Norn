@@ -15,18 +15,17 @@ truths like this repo is a sad little trade show booth.
 
 ## Eve Plugin Sidecar
 
-`crates/norn-eve-plugin` is Norn's runtime-independent Eve plugin boundary. It
-accepts one `gamecult.eve.plugin_abi.request.v1` JSON document per UTF-8 stdin
-line and emits one response line in request order. The sidecar owns graph
-validation, semantic projection, and solver-backed measurement. It does not
-own provider state or renderer projection.
+`crates/norn-eve-plugin` is Norn's runtime-independent Eve plugin boundary. Its
+default entry point advertises a CultNet RUDP operation endpoint carrying
+MessagePack Eve ABI requests. The sidecar owns graph validation, semantic
+projection, and solver-backed measurement. It does not own provider state or
+renderer projection. Pass `--stdio` only for local NDJSON debugging.
 
 Owner-published discovery and conformance documents live under `plugins/` and
 the graph document/layout schemas live under `schemas/`.
 
 ```powershell
-Get-Content .\crates\norn-eve-plugin\tests\fixtures\sai-nested-norn.ndjson |
-  cargo run -q -p norn-eve-plugin
+npm run witness:eve-plugin
 ```
 
 ## Rust Solver

@@ -213,6 +213,7 @@ fn measure(request: &PluginRequest) -> PluginResponse {
         request,
         json!({
             "measurementKind": "graph-layout-metrics",
+            "measurementOutputs": ["nodeBounds", "edgeRoutes", "viewportBounds"],
             "layoutSchema": "norn.graph.layout_result.v1",
             "nodeBounds": node_bounds,
             "edgeRoutes": edge_routes,

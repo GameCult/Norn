@@ -13,11 +13,12 @@
   "runtime": {
     "invocationModel": "executable-sidecar",
     "contract": "gamecult.eve.plugin_abi.v1",
-    "transports": ["stdio"],
+    "transports": ["cultnet-rudp", "stdio"],
     "authority": ["renderer-independent", "no-provider-state-mutation", "provider-accepts-or-denies-commands"],
     "sidecar": {
       "processKind": "long-running-daemon",
-      "protocol": "stdio-ndjson",
+      "protocol": "cultnet-operation-v0",
+      "debugProtocol": "stdio-ndjson",
       "requestSchema": "gamecult.eve.plugin_abi.request.v1",
       "responseSchema": "gamecult.eve.plugin_abi.response.v1",
       "operations": ["describe", "validate", "project", "measure"],

@@ -12,6 +12,7 @@ export type {
   NornGraphNode,
   NornGraphsState,
   NornViewerProps,
+  PositionedNode,
   EpiphanyValidationIssue,
   GraphKey,
   NodeEnvelope,

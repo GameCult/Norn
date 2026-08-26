@@ -43,6 +43,12 @@ The public viewer API is intentionally coarse:
 - `selection`, `focusSelection`, `expandedNode`, and callbacks for app integration
 - typed state and event payloads
 
+Norn owns graph layout, viewport motion, selection, focus, inspection, and the
+interaction boundary of expanded node articles. Consumers own graph meaning and
+article content. When an expanded article fills a node surface, Norn derives wheel
+and drag behavior from that surface's committed article geometry; consumers do not
+need product-specific classes or data attributes to make the article scrollable.
+
 ## What It Does
 
 The support generator:

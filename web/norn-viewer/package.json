@@ -19,7 +19,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:lib && npm run build:demo",
-    "build:lib": "tsup src/index.ts --format esm,cjs --dts --external react --external react-dom --clean",
+    "build:lib": "tsup src/index.ts --format \"esm,cjs\" --dts --external react --external react-dom --clean",
     "build:demo": "vite build --outDir dist/demo",
     "build:solver:wasm": "powershell -ExecutionPolicy Bypass -File ./scripts/Build-RustSolverWasm.ps1",
     "typecheck": "tsc --noEmit",

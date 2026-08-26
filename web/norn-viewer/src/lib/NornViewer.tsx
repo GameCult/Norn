@@ -2844,13 +2844,6 @@ function isArticleContentTarget(target: EventTarget | null) {
     return false;
   }
 
-  const articleContent = target.closest<HTMLElement>(
-    "[data-epiphany-article-content], .zyphos-spa-article",
-  );
-  if (!articleContent) {
-    return false;
-  }
-
   const surface = target.closest<HTMLElement>(".norn-node-surface");
   if (!surface) {
     return false;
